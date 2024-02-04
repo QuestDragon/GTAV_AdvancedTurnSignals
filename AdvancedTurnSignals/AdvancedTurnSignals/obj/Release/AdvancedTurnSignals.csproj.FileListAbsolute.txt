@@ -1,0 +1,14 @@
+C:\Users\QuestDragon\source\repos\AdvancedTurnSignals\AdvancedTurnSignals\bin\Release\TurnSignalSounds\HAZARD_BUTTON.wav
+C:\Users\QuestDragon\source\repos\AdvancedTurnSignals\AdvancedTurnSignals\bin\Release\TurnSignalSounds\INDICATOR_SOUND.wav
+C:\Users\QuestDragon\source\repos\AdvancedTurnSignals\AdvancedTurnSignals\bin\Release\TurnSignalSounds\TURN_LEVER_INTRO.wav
+C:\Users\QuestDragon\source\repos\AdvancedTurnSignals\AdvancedTurnSignals\bin\Release\TurnSignalSounds\TURN_LEVER_OUTRO.wav
+C:\Users\QuestDragon\source\repos\AdvancedTurnSignals\AdvancedTurnSignals\bin\Release\AdvancedTurnSignals.ini
+C:\Users\QuestDragon\source\repos\AdvancedTurnSignals\AdvancedTurnSignals\bin\Release\AdvancedTurnSignals.dll
+C:\Users\QuestDragon\source\repos\AdvancedTurnSignals\AdvancedTurnSignals\bin\Release\AdvancedTurnSignals.pdb
+C:\Users\QuestDragon\source\repos\AdvancedTurnSignals\AdvancedTurnSignals\bin\Release\ScriptHookVDotNet3.dll
+C:\Users\QuestDragon\source\repos\AdvancedTurnSignals\AdvancedTurnSignals\bin\Release\ScriptHookVDotNet3.pdb
+C:\Users\QuestDragon\source\repos\AdvancedTurnSignals\AdvancedTurnSignals\obj\Release\AdvancedTurnSignals.csproj.AssemblyReference.cache
+C:\Users\QuestDragon\source\repos\AdvancedTurnSignals\AdvancedTurnSignals\obj\Release\AdvancedTurnSignals.csproj.CoreCompileInputs.cache
+C:\Users\QuestDragon\source\repos\AdvancedTurnSignals\AdvancedTurnSignals\obj\Release\AdvancedTurnSignals.csproj.CopyComplete
+C:\Users\QuestDragon\source\repos\AdvancedTurnSignals\AdvancedTurnSignals\obj\Release\AdvancedTurnSignals.dll
+C:\Users\QuestDragon\source\repos\AdvancedTurnSignals\AdvancedTurnSignals\obj\Release\AdvancedTurnSignals.pdb
