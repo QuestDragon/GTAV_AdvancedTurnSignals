@@ -1,4 +1,4 @@
-# Advanced Turn Signlals - Created By QuestDragon
+# Advanced Turn Signals - Created By QuestDragon
 Version: 1.0
 ## 作成した経緯
 今日も多数の方向指示器Modがアップロードされていますが、その多くは点灯と消灯を手動で行うものだったり、方向指示器の音がなかったりするものがほとんどでしたので、スクリプト制作の練習も兼ねて作成してみました。
