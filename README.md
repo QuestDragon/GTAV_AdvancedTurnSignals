@@ -24,7 +24,7 @@ ScriptHookV DotNetを使用しており、バージョンは3.6.0のNightly ビ�
 ## インストール
 以下から各種ファイルをダウンロードし、スクリプトMod本体はScriptsフォルダに、前提条件のファイルはGTA5.exeと同じフォルダにコピーしてください。
 
-| [Advanced Turn Signals](https://github.com/QuestDragon/GTAV_AdvancedTurnSignals/releases/latest/download/AdvancedTurnSignals.zip) | [ScriptHookV](http://dev-c.com/gtav/scripthookv/) | [ScriptHookV DotNet 3.6.0 Nightly.57](https://github.com/scripthookvdotnet/scripthookvdotnet-nightly/releases/tag/v3.6.0-nightly.57) |
+| [Advanced Turn Signals](https://github.com/QuestDragon/GTAV_AdvancedTurnSignals/releases/download/Release/AdvancedTurnSignals.zip) | [ScriptHookV](http://dev-c.com/gtav/scripthookv/) | [ScriptHookV DotNet 3.6.0 Nightly.57](https://github.com/scripthookvdotnet/scripthookvdotnet-nightly/releases/tag/v3.6.0-nightly.57) |
 | ------------- | ------------- | ------------- | 
  
 ## 各種設定
