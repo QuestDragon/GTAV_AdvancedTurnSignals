@@ -1,5 +1,5 @@
 # Advanced Turn Signals - Created By QuestDragon
-Version: 1.0
+Version: 1.0.1
 ## 作成した経緯
 今日も多数の方向指示器Modがアップロードされていますが、その多くは点灯と消灯を手動で行うものだったり、方向指示器の音がなかったりするものがほとんどでしたので、スクリプト制作の練習も兼ねて作成してみました。
 
@@ -35,6 +35,16 @@ ScriptHookV DotNetを使用しており、バージョンは3.6.0のNightly ビ�
 
 | [Advanced Turn Signals](https://github.com/QuestDragon/GTAV_AdvancedTurnSignals/releases/latest/download/AdvancedTurnSignals.zip) | [ScriptHookV](http://dev-c.com/gtav/scripthookv/) | [ScriptHookV DotNet 3.6.0 Nightly.57](https://github.com/scripthookvdotnet/scripthookvdotnet-nightly/releases/tag/v3.6.0-nightly.57) |
 | ------------- | ------------- | ------------- | 
+
+## インストール時のSCRIPT HOOK V ERRORについて
+ScriptHookV DotNet Nightlyビルドを導入してGTA5を起動すると、「SCRIPT HOOK V ERROR」が表示され、scriptsフォルダに導入されている.NETスクリプトのすべてが読み込まれない現象になることがあります。
+
+これは、ScriptHookV DotNetの前提条件を満たしていないことが原因です。**Releaseビルドでは動いていても、Nightlyビルドでは動かないことがあります。**
+
+そのため、今一度次のコンポーネントがインストールされているかご確認ください。
+
+| [.NET Framework 4.8 （ランタイム、開発者ビルドの"両方"が必要です。）](https://dotnet.microsoft.com/download/dotnet-framework/net48) | [Visual C++ Redistributable for Visual Studio 2019 x64](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads) |
+| ------------- | ------------- |
  
 ## 各種設定
 設定はiniファイルから行います。
@@ -50,13 +60,19 @@ ScriptHookV DotNetを使用しており、バージョンは3.6.0のNightly ビ�
 **Language**： スクリプトModから送信される通知メッセージの言語を指定できます。現状「*en*」で英語、「*ja*」で日本語を指定できます。指定が正しくない場合、スクリプトModロード時に一時的に英語に設定されます。
 
 ### Keys
-方向指示器のキー設定を変更できます。
+AdvancedTurnSignalsで使用するキー設定を変更できます。
 
-**Left**：左折
+ポーズキーはゲームで設定しているキーを指定してください。Escキーは指定する必要はありません。
 
-**Right**：右折
+**Left**：左方向指示器切り替えしない
 
-**Hazard**：ハザードランプ
+**Right**：右方向指示器切り替え
+
+**Hazard**：ハザードランプ切り替え
+
+**PrimaryPause**：メインポーズキー
+
+**SecondaryPause**：予備ポーズキー
 
 指定する文字列は[こちらのサイト](https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.keys?redirectedfrom=MSDN&view=windowsdesktop-7.0)をご確認ください。指定が正しくない場合、スクリプトModロード時に一時的にデフォルト設定が読み込まれます。
 
@@ -86,14 +102,19 @@ iniファイルにて**Enabled**を*True*にしているとゲームロード時
 
 ScriptHookV DotNetのリリース版（3.6.0）では動作しない理由は、どうやら不具合でハンドル角度が取得できないようです。開発版のNightlyビルドでは修正されているので、こちらを使用する必要があります。
 
-ポーズメニューを表示しても効果音（方向指示器の音）が停止しない他、GTA5をバックグラウンドに移しても効果音はなり続けます。この理由は、効果音はGTA5側というよりPC側から流しているため、このようになっています。
+サウンドが再生された状態でポーズメニューを表示する際、ESCキーまたはiniで指定したキーを押すとサウンドが一時停止します。ですが、Alt+Tabキーなど、ポーズキーを押さずにGTA5をバックグラウンドに移した場合は効果音が鳴り続けます。
+### 理由
+	この理由は、まずそもそも効果音はGTA5側というよりPC側から流しているため、一時停止するにはゲームのポーズの状態を判断する必要があります。スクリプトModは通常、監視し続ける処理とキーが押されたときの処理に分かれています。
+ 
+	一見、監視し続ける処理にポーズ画面の判断を入れれば、どんな状態からポーズ画面を表示してもサウンドが停止するのではないかと考えると思いますが、残念ながらポーズ状態にすると監視し続ける処理は動作を停止してしまいます。
+ 
+	キーを押したときの処理は、GTA5側がキーの情報を受け取らないと処理されません。つまり、Alt+Tabキーの場合はGTA5が受け取るというよりWindows側が受け取るため、スクリプト側でサウンドの一時停止処理を行えないのです。
 
-なお、一応ポーズメニューを表示したときに効果音を一時停止するコードは組んであるのですが、ポーズメニューにした際にそもそもスクリプトModの動作も一時停止してしまうため、PC側から流れている効果音をスクリプトMod側で制御できないのかもしれません…。
 
 ## 免責事項
 本スクリプトModを使用したことにより生じた被害に関して、私QuestDragonは一切の責任を負いかねます。自己責任でご使用ください。
 
-2次配布は禁止です。
+ファイルに一切変更を加えない状態での2次配布は禁止です。
 
 予告なく配布を停止することがあります。予めご了承ください。
 
