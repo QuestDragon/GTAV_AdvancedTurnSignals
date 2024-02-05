@@ -22,6 +22,9 @@ namespace AdvancedTurnSignals
         private static Keys left; //キー設定を用意
         private static Keys right; //キー設定を用意
         private static Keys hazard; //キー設定を用意
+        private static Keys escape = Keys.Escape; //キー設定を用意
+        private static Keys pause1; //キー設定を用意
+        private static Keys pause2; //キー設定を用意
         private static string lang; //言語
         private static bool enabled = true; //有効または無効
         private static bool autooff = true; //自動消灯
@@ -53,6 +56,8 @@ namespace AdvancedTurnSignals
             left = ini.GetValue<Keys>("Keys", "Left", Keys.J);
             right = ini.GetValue<Keys>("Keys", "Right", Keys.K);
             hazard = ini.GetValue<Keys>("Keys", "Hazard", Keys.I);
+            pause1 = ini.GetValue<Keys>("Keys", "PrimaryPause", Keys.P);
+            pause2 = ini.GetValue<Keys>("Keys", "SecondaryPause", Keys.None);
             lang = ini.GetValue<string>("Lang", "Language", "en");
             enabled = ini.GetValue<bool>("General", "Enabled", true);
             use_sound = ini.GetValue<bool>("General", "UseSound", true);
@@ -142,7 +147,9 @@ namespace AdvancedTurnSignals
                         }
                         autooff = false;
                     }
-
+                }
+                if (use_sound)
+                {
                     bool audiofail = false;
                     try
                     {
@@ -204,8 +211,9 @@ namespace AdvancedTurnSignals
 
             return musicLength_s;
         }
+                */
 
-        private async void playsound(string audio = "", bool loop = false)
+        private void signal_manual(string mode = "turn")
         {
             if (player != null)
             {
@@ -214,31 +222,60 @@ namespace AdvancedTurnSignals
                 player = null;
             }
 
-            if (audio != "")
+            //読み込む
+            if (mode == "turn")
             {
-                while (player != null)
-                {
-                    Console.WriteLine("Sound: Wait...");
-                }
+                player = new SoundPlayer(@"scripts\TurnSignalSounds\TURN_LEVER_INTRO.wav");
+            }
+            else if(mode == "hazard")
+            {
+                player = new SoundPlayer(@"scripts\TurnSignalSounds\HAZARD_BUTTON.wav");
+            }
+            
+            //再生する
+            player.PlaySync();
 
-                Notification.Show($"time: {soundtime(@"scripts\TurnSignalSounds\" + audio + ".wav")}");
-                //読み込む
-                player = new SoundPlayer(@"scripts\TurnSignalSounds\" + audio + ".wav");
-                //非同期再生する
-                if (loop)
-                {
-                    player.PlayLooping();
-                }
-                else
-                {
-                    player.Play();
-                    await Task.Delay(TimeSpan.FromSeconds(soundtime(@"scripts\TurnSignalSounds\" + audio + ".wav")));
-                }
+            //一度破棄
+            player.Stop();
+            player.Dispose();
+            player = null;
+
+            if(Game.Player.Character.CurrentVehicle.IsLeftIndicatorLightOn | Game.Player.Character.CurrentVehicle.IsRightIndicatorLightOn)
+            {
+                player = new SoundPlayer(@"scripts\TurnSignalSounds\INDICATOR_SOUND.wav");
+                player.PlayLooping();
             }
         }
-        */
-        private void keyDown(object sender, KeyEventArgs e)
+
+        private void signal_autooff()
         {
+            if (player != null) //再生中なら一度破棄
+            {
+                player.Stop();
+                player.Dispose();
+                player = null;
+            }
+            //読み込む
+            player = new SoundPlayer(@"scripts\TurnSignalSounds\TURN_LEVER_OUTRO.wav");
+            //再生する
+            player.PlaySync();
+            //用済みなので破棄
+            player.Stop();
+            player.Dispose();
+            //nullを入れてしまうとTick側の再生処理が反応してしまうのでDisposeまで
+
+            Task.Delay(1000);
+            if (Game.Player.Character.CurrentVehicle.IsLeftIndicatorLightOn | Game.Player.Character.CurrentVehicle.IsRightIndicatorLightOn)
+            {
+                player = new SoundPlayer(@"scripts\TurnSignalSounds\INDICATOR_SOUND.wav");
+                player.PlayLooping();
+            }
+
+        }
+
+        private async void keyDown(object sender, KeyEventArgs e)
+        {
+
             Vehicle cv = Game.Player.Character.CurrentVehicle;
 
             if (enabled && cv != null && new Keys[] { left,right,hazard }.Contains(e.KeyCode)) //有効かつ車に乗っているかつ設定したキーバインドが押されている
@@ -247,17 +284,8 @@ namespace AdvancedTurnSignals
                 {
                     if (use_sound)
                     {
-                        //読み込む
-                        player = new System.Media.SoundPlayer(@"scripts\TurnSignalSounds\TURN_LEVER_INTRO.wav");
-                        //再生する ※同期再生だが意外と影響はないらしい
-                        player.PlaySync();
-                        if (player != null)
-                        {
-                            player.Stop();
-                            player.Dispose();
-                            player = null;
-                        }
-
+                        // ウインカー再生
+                        Task t = Task.Run(() => { signal_manual(); });
                     }
 
                     if (!is_hazard)
@@ -265,25 +293,11 @@ namespace AdvancedTurnSignals
                         cv.IsRightIndicatorLightOn = false; //消灯
                         cv.IsLeftIndicatorLightOn = !cv.IsLeftIndicatorLightOn; //ON/OFF 切り替え
                         turn_left = cv.IsLeftIndicatorLightOn;
-                        if (cv.IsLeftIndicatorLightOn) //ウインカー有効時
+                        if (cv.IsLeftIndicatorLightOn && autooff) //ウインカー有効時
                         {
-                            if (use_sound)
-                            {
-                                player = new SoundPlayer(@"scripts\TurnSignalSounds\INDICATOR_SOUND.wav"); //サウンド再生(loop)
-                                player.PlayLooping();
-                                toggle_angle = cv.SteeringAngle;
-                                off_ready = is_off_angle("L"); //自動消灯できる角度まで切っているか
-                            }
+                            toggle_angle = cv.SteeringAngle;
+                            off_ready = is_off_angle("L"); //自動消灯できる角度まで切っているか
 
-                        }
-                        else //ウインカー無効時
-                        {
-                            if(player != null)
-                            {
-                                player.Stop();
-                                player.Dispose();
-                                player = null;
-                            }
                         }
                     }
                     else
@@ -295,17 +309,8 @@ namespace AdvancedTurnSignals
                 {
                     if (use_sound)
                     {
-                        //読み込む
-                        player = new SoundPlayer(@"scripts\TurnSignalSounds\TURN_LEVER_INTRO.wav");
-                        //再生する ※同期再生だが意外と影響はないらしい
-                        player.PlaySync();
-                        if (player != null)
-                        {
-                            player.Stop();
-                            player.Dispose();
-                            player = null;
-                        }
-
+                        // ウインカー再生
+                        Task t = Task.Run(() => { signal_manual(); });
                     }
                     if (!is_hazard)
                     {
@@ -313,27 +318,11 @@ namespace AdvancedTurnSignals
                         cv.IsRightIndicatorLightOn = !cv.IsRightIndicatorLightOn; //ON/OFF 切り替え
 
                         turn_right = cv.IsRightIndicatorLightOn;
-                        if (cv.IsRightIndicatorLightOn)
+                        if (cv.IsRightIndicatorLightOn && autooff)
                         {
-                            if (use_sound)
-                            {
-                                player = new SoundPlayer(@"scripts\TurnSignalSounds\INDICATOR_SOUND.wav"); //サウンド再生(loop)
-                                player.PlayLooping();
-                            }
                             toggle_angle = cv.SteeringAngle;
-                            off_ready = is_off_angle("R"); //自動消灯できる角度まで切っているか
-
-                        }
-                        else //ウインカー無効時
-                        {
-                            if(player != null)
-                            {
-                                player.Stop();
-                                player.Dispose();
-                                player = null;
-                            }
-                        }
-                    }
+                            off_ready = is_off_angle("L"); //自動消灯できる角度まで切っているか
+                        }                    }
                     else
                     {
                         turn_right = !turn_right;
@@ -341,28 +330,11 @@ namespace AdvancedTurnSignals
                 }
                 else if(e.KeyCode == hazard)
                 {
-                    if (use_sound)
-                    {
-                        //読み込む
-                        player = new SoundPlayer(@"scripts\TurnSignalSounds\HAZARD_BUTTON.wav");
-                        //再生する ※同期再生だが意外と影響はないらしい
-                        player.PlaySync();
-                        player = new SoundPlayer(@"scripts\TurnSignalSounds\INDICATOR_SOUND.wav"); //サウンド再生(loop)
-                        player.PlayLooping();
-
-                    }
-
                     if (cv.IsLeftIndicatorLightOn && cv.IsRightIndicatorLightOn) //ハザード状態の場合のみ
                     {
                         cv.IsLeftIndicatorLightOn = turn_left; //前回の状態に戻す
                         cv.IsRightIndicatorLightOn = turn_right;
                         is_hazard = false;
-                        if(!turn_left && !turn_right && player != null)
-                        {
-                            player.Stop();
-                            player.Dispose();
-                            player = null;
-                        }
                     }
                     else
                     {
@@ -373,9 +345,29 @@ namespace AdvancedTurnSignals
                         cv.IsLeftIndicatorLightOn = true; //点灯
                         is_hazard= true;
                     }
+                    if (use_sound)
+                    {
+                        Task t = Task.Run(() => { signal_manual("hazard"); });
+                    }
 
                 }
             }
+
+            if (use_sound && new Keys[] { pause1,pause2,escape }.Contains(e.KeyCode))
+            {
+                await Task.Delay(1000);
+                if (Game.IsPaused) //ポーズ中の場合
+                {
+                    if (player != null)
+                    {
+                        player.Stop();
+                        player.Dispose();
+                        player = null;
+                    }
+                }
+
+            }
+
         }
 
         //Steering Angle = マイナスが右回し、プラスが左まわし。
@@ -402,29 +394,20 @@ namespace AdvancedTurnSignals
             }
         }
 
-        private bool indicator_sound_enabled = false; //ポーズ時使用
         private void onTick(object sender, EventArgs e)
         {
             Vehicle cv = Game.Player.Character.CurrentVehicle;
-
-            if(Game.IsPaused) //ポーズ中の場合 (動かない？)
+            if(cv == null && player!= null)  //非乗車状態でサウンドが鳴っている場合
             {
-                if (player != null)
-                {
-                    indicator_sound_enabled=true;
-                    player.Stop();
-                    player.Dispose();
-                    player = null;
-                }
+                player.Stop();
+                player.Dispose();
+                player = null;
             }
-            else
+            else if(cv != null && player == null && cv.IsLeftIndicatorLightOn | cv.IsRightIndicatorLightOn) //車両乗車時にウインカーが有効の場合
             {
-                if(indicator_sound_enabled)
-                {
-                    indicator_sound_enabled=false;
-                    player = new SoundPlayer(@"scripts\TurnSignalSounds\INDICATOR_SOUND.wav"); //サウンド再生(loop)
-                    player.PlayLooping();
-                }
+                player = new SoundPlayer(@"scripts\TurnSignalSounds\INDICATOR_SOUND.wav"); //サウンド再生(loop)
+                player.PlayLooping();
+
             }
 
             if (autooff && cv != null) //自動消灯オン+車に乗っている
@@ -441,18 +424,9 @@ namespace AdvancedTurnSignals
 
                             if (use_sound)
                             {
-                                //読み込む
-                                player = new SoundPlayer(@"scripts\TurnSignalSounds\TURN_LEVER_OUTRO.wav");
-                                //再生する ※同期再生だが意外と影響はないらしい
-                                player.PlaySync();
-                                if (player != null)
-                                {
-                                    player.Stop();
-                                    player.Dispose();
-                                    player = null;
-                                }
-
+                                Task t = Task.Run(() => { signal_autooff(); });
                             }
+
 
                         }
                         else if (off_ready && cv.SteeringAngle < off_angle) //自動消灯条件を満たした場合
@@ -462,17 +436,7 @@ namespace AdvancedTurnSignals
 
                             if (use_sound)
                             {
-                                //読み込む
-                                player = new SoundPlayer(@"scripts\TurnSignalSounds\TURN_LEVER_OUTRO.wav");
-                                //再生する ※同期再生だが意外と影響はないらしい
-                                player.PlaySync();
-                                if (player != null)
-                                {
-                                    player.Stop();
-                                    player.Dispose();
-                                    player = null;
-                                }
-
+                                Task t = Task.Run(() => { signal_autooff(); });
                             }
                         }
                     }
@@ -487,17 +451,7 @@ namespace AdvancedTurnSignals
 
                             if (use_sound)
                             {
-                                //読み込む
-                                player = new SoundPlayer(@"scripts\TurnSignalSounds\TURN_LEVER_OUTRO.wav");
-                                //再生する ※同期再生だが意外と影響はないらしい
-                                player.PlaySync();
-                                if (player != null)
-                                {
-                                    player.Stop();
-                                    player.Dispose();
-                                    player = null;
-                                }
-
+                                Task t = Task.Run(() => { signal_autooff(); });
                             }
 
                         }
@@ -508,17 +462,7 @@ namespace AdvancedTurnSignals
 
                             if (use_sound)
                             {
-                                //読み込む
-                                player = new SoundPlayer(@"scripts\TurnSignalSounds\TURN_LEVER_OUTRO.wav");
-                                //再生する ※同期再生だが意外と影響はないらしい
-                                player.PlaySync();
-                                if (player != null)
-                                {
-                                    player.Stop();
-                                    player.Dispose();
-                                    player = null;
-                                }
-
+                                Task t = Task.Run(() => { signal_autooff(); });
                             }
                         }
                     }
@@ -536,17 +480,7 @@ namespace AdvancedTurnSignals
 
                             if (use_sound)
                             {
-                                //読み込む
-                                player = new SoundPlayer(@"scripts\TurnSignalSounds\TURN_LEVER_OUTRO.wav");
-                                //再生する ※同期再生だが意外と影響はないらしい
-                                player.PlaySync();
-                                if (player != null)
-                                {
-                                    player.Stop();
-                                    player.Dispose();
-                                    player = null;
-                                }
-
+                                Task t = Task.Run(() => { signal_autooff(); });
                             }
                         }
                         else if (off_ready && cv.SteeringAngle < off_angle) //自動消灯条件を満たした場合
@@ -556,17 +490,7 @@ namespace AdvancedTurnSignals
 
                             if (use_sound)
                             {
-                                //読み込む
-                                player = new SoundPlayer(@"scripts\TurnSignalSounds\TURN_LEVER_OUTRO.wav");
-                                //再生する ※同期再生だが意外と影響はないらしい
-                                player.PlaySync();
-                                if (player != null)
-                                {
-                                    player.Stop();
-                                    player.Dispose();
-                                    player = null;
-                                }
-
+                                Task t = Task.Run(() => { signal_autooff(); });
                             }
                         }
                     }
@@ -580,17 +504,7 @@ namespace AdvancedTurnSignals
 
                             if (use_sound)
                             {
-                                //読み込む
-                                player = new SoundPlayer(@"scripts\TurnSignalSounds\TURN_LEVER_OUTRO.wav");
-                                //再生する ※同期再生だが意外と影響はないらしい
-                                player.PlaySync();
-                                if (player != null)
-                                {
-                                    player.Stop();
-                                    player.Dispose();
-                                    player = null;
-                                }
-
+                                Task t = Task.Run(() => { signal_autooff(); });
                             }
                         }
                         else if (off_ready && cv.SteeringAngle > -off_angle) //自動消灯条件を満たした場合
@@ -600,27 +514,9 @@ namespace AdvancedTurnSignals
 
                             if (use_sound)
                             {
-                                //読み込む
-                                player = new SoundPlayer(@"scripts\TurnSignalSounds\TURN_LEVER_OUTRO.wav");
-                                //再生する ※同期再生だが意外と影響はないらしい
-                                player.PlaySync();
-                                if (player != null)
-                                {
-                                    player.Stop();
-                                    player.Dispose();
-                                    player = null;
-                                }
+                                Task t = Task.Run(() => { signal_autooff(); });
                             }
                         }
-                    }
-                    if (cv.IsLeftIndicatorLightOn && cv.IsRightIndicatorLightOn) //ハザードが継続中の場合
-                    {
-                        if(player == null && use_sound)
-                        {
-                            player = new SoundPlayer(@"scripts\TurnSignalSounds\INDICATOR_SOUND.wav"); //サウンド再生(loop)
-                            player.PlayLooping();
-                        }
-
                     }
 
                 }
