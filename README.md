@@ -123,7 +123,7 @@ iniファイルにて**Enabled**を*True*にしているとゲームロード時
 
 **Sounds**タグは**TURN_LEVER_INTRO**、**TURN_LEVER_OUTRO**、**INDICATOR_SOUND**、**HAZARD_BUTTON**の計4つのタグを必ず書いてください。
 
-再生したくない箇所がある場合はタグ名だけ書いておいてください。タグを省略することはしないでください。（例：\<HAZARD_BUTTON /> または \<HAZARD_BUTTON>\</HAZARD_BUTTON>）
+再生したくない箇所がある場合はタグ名だけ書いておいてください。タグを丸ごと省略することはしないでください。（例：\<HAZARD_BUTTON /> または \<HAZARD_BUTTON>\</HAZARD_BUTTON>）
 
 ## 余談
 ハンドルの角度で方向指示器を自動消灯するか判断しているので、ikt氏のManual Transmission Modにも対応させようかと思ったのですが、GTA5のアップデートによって使えなくなっていることが判明し、実装できませんでした…。
