@@ -46,6 +46,17 @@ ScriptHookV DotNet Nightlyビルドを導入してGTA5を起動すると、「SC
 
 | [.NET Framework 4.8 （ランタイム、開発者ビルドの"両方"が必要です。）](https://dotnet.microsoft.com/download/dotnet-framework/net48) | [Visual C++ Redistributable for Visual Studio 2019 x64](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads) |
 | ------------- | ------------- |
+
+## 起動時の無限ロード現象について
+環境によっては、GTA5を起動時に背景が真っ黒（またはスライドアニメーションが停止）になり、無限ロードになってしまう現象ですが、これはScriptHookVDotNetのNightlyビルドによる不具合と思われます。
+
+こればかりは私の方ではどうにもならないので、SHVDNのアップデートを待っていただく他に対策はありません。（安定版（3.6.0）だとこの現象は起こりません。）
+
+回避策としては、私の環境にはなりますが、PCを再起動したあとの一回目の起動時だけ読み込めるようです。
+
+Nightlyビルドなので仕方ない部分ではありますが、安定版ビルドだとAdvanced Turn Signals は動かない…というのが実情なもので、仕方がない部分ではあります。
+
+現状では、このページだと57ビルドしかリンクを置いていませんが、Nightlyビルドのアップデートが行われたらなるべく早く最新版を導入することが今現在できることの全てのような気がします。（もちろん安定版の3.7.0が出ることが一番なのですが）
  
 ## 各種設定
 設定はiniファイルから行います。
