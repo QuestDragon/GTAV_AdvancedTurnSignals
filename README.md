@@ -1,5 +1,5 @@
 # Advanced Turn Signals - Created By QuestDragon
-Version: 1.1.1
+Version: 1.2.1
 ## 作成した経緯
 今日も多数の方向指示器Modがアップロードされていますが、その多くは点灯と消灯を手動で行うものだったり、方向指示器の音がなかったりするものがほとんどでしたので、スクリプト制作の練習も兼ねて作成してみました。
 
@@ -12,10 +12,13 @@ Version: 1.1.1
 
 その他に、方向指示器と逆の方向にハンドルを回した際にも消灯するようになっていたり、方向指示器の点灯状態とハザードランプの点灯状態は独立しているなど、細部の挙動にもこだわっています。
 
+低速走行時にハンドルを回すと、自動で方向指示器が点灯する機能もつけています。_（NoRainさんからのリクエスト）_
+
 方向指示器に関する効果音を使用できます。 `scripts\AdvancedTurnSignals\TurnSignalSounds` フォルダにサンプルの各種効果音を同梱しています。xmlファイルを使用して車両ごとにカスタマイズすることも可能です。（iniファイルにて効果音の有効無効を切り替えられます）
 
 スクリプトから送信される通知の表示言語は `scripts\AdvancedTurnSignals\Localization.ini` にて翻訳できます。
 
+コントローラー操作にも対応しています。なお、コントローラーでの方向指示器操作を行わない方のために使用の有無をiniファイルから設定できるようになっています。_（stevensonjnrさん、dustybluesさんからのリクエスト）_
 
 ## 機能追加、フィードバックについて
 制作者は初心者なので何かと至らないところがあると思います。
@@ -34,7 +37,7 @@ ScriptHookV DotNetを使用しており、バージョンは3.6.0のNightly ビ�
 ## インストール
 以下から各種ファイルをダウンロードし、スクリプトMod本体はScriptsフォルダに、前提条件のファイルはGTA5.exeと同じフォルダにコピーしてください。
 
-| [Advanced Turn Signals](https://github.com/QuestDragon/GTAV_AdvancedTurnSignals/releases/latest/download/AdvancedTurnSignals.zip) | [ScriptHookV](http://dev-c.com/gtav/scripthookv/) | [ScriptHookV DotNet 3.6.0 Nightly.57](https://github.com/scripthookvdotnet/scripthookvdotnet-nightly/releases/tag/v3.6.0-nightly.57) |
+| [Advanced Turn Signals](https://github.com/QuestDragon/GTAV_AdvancedTurnSignals/releases/latest/download/AdvancedTurnSignals.zip) | [ScriptHookV](http://dev-c.com/gtav/scripthookv/) | [ScriptHookV DotNet 3.6.0 Nightly](https://github.com/scripthookvdotnet/scripthookvdotnet-nightly/releases/latest) |
 | ------------- | ------------- | ------------- | 
 
 ## インストール時のSCRIPT HOOK V ERRORについて
@@ -47,17 +50,6 @@ ScriptHookV DotNet Nightlyビルドを導入してGTA5を起動すると、「SC
 | [.NET Framework 4.8 （ランタイム、開発者ビルドの"両方"が必要です。）](https://dotnet.microsoft.com/download/dotnet-framework/net48) | [Visual C++ Redistributable for Visual Studio 2019 x64](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads) |
 | ------------- | ------------- |
 
-## 起動時の無限ロード現象について
-環境によっては、GTA5を起動時に背景が真っ黒（またはスライドアニメーションが停止）になり、無限ロードになってしまう現象が起こるようなのですが、これはScriptHookVDotNetのNightlyビルドによる不具合と思われます。
-
-こればかりは私の方ではどうにもならないので、SHVDNのアップデートを待っていただく他に対策はありません。（安定版（3.6.0）だとこの現象は起こりません。）
-
-回避策としては、私の環境にはなりますが、PCを再起動したあとの一回目の起動時だけ読み込めるようです。
-
-Nightlyビルドなので仕方ない部分ではありますが、安定版ビルドだとAdvanced Turn Signals は動かない…というのが実情なもので、仕方がない部分ではあります。
-
-現状では、このページだと57ビルドしかリンクを置いていませんが、Nightlyビルドのアップデートが行われたらなるべく早く最新版を導入することが今現在できることの全てのような気がします。（もちろん安定版の3.7.0が出ることが一番なのですが）
- 
 ## 各種設定
 設定はiniファイルから行います。
 
@@ -69,6 +61,7 @@ Nightlyビルドなので仕方ない部分ではありますが、安定版ビ�
 **UseSound**：効果音の有効化と無効化を切り替えます。同じく「*true*」で有効、「*false*」で無効になります。ただし、音声ファイルが正しく用意されていない場合、スクリプトの動作は継続されますが本来音声ファイルが必要になる操作を行っても音声ファイルは再生されません。
 
 **InterSound**：効果音の音声ファイルが見つからなかった場合に、デフォルトの音声ファイルを再生するかを切り替えます。同じく「*true*」で有効、「*false*」で無効になります。ただし、デフォルトの音声ファイルが設定されていないか、デフォルトの音声ファイルも存在しない場合は本来音声ファイルが必要になる操作を行っても音声ファイルは再生されません。
+
 ### Keys
 AdvancedTurnSignalsで使用するキー設定を変更できます。
 
@@ -86,6 +79,22 @@ AdvancedTurnSignalsで使用するキー設定を変更できます。
 
 指定する文字列は[こちらのサイト](https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.keys?redirectedfrom=MSDN&view=windowsdesktop-7.0)をご確認ください。指定が正しくない場合、スクリプトModロード時に一時的にデフォルト設定が読み込まれます。
 
+### Buttons
+AdvancedTurnSignalsをコントローラーで使用する際のボタン設定を変更できます。
+
+**UseButton**：コントローラーの使用切り替え
+
+**Left**：左方向指示器切り替え
+
+**Right**：右方向指示器切り替え
+
+**Hazard**：ハザードランプ切り替え
+
+指定する文字列は次の文字列が使用できます。
+
+| LB | LS | LT | PadDown | PadLeft | PadRight | PadUp | RB | RS | RT | A | B | Y | X | Select |
+| ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
+
 ### Autooff
 方向指示器の自動消灯に関する設定が行なえます。
 
@@ -99,8 +108,20 @@ AdvancedTurnSignalsで使用するキー設定を変更できます。
 
 **AutooffDuration**：KeyboardCompが有効になっている状態でOffAngleの値まで戻った際に方向指示器を自動消灯する所要時間をミリ秒単位で指定できます。※約200ミリ秒以下にすると正常に動作しない可能性があります。即時自動消灯を行う場合はKeyboardCompを無効にしてください。
 
+### Autoon
+方向指示器の自動点灯に関する設定が行なえます。
+
+**Autoon**：有効化と無効化を切り替えます。「*true*」で有効、「*false*」で無効になります。
+
+**OnAngle**：方向指示器が自動点灯するために回さなければならないハンドルの角度です。ハンドルの角度がこの角度に達するとハンドルを回した方向の方向指示器が自動で点灯します。
+
+**OnSpeed**：方向指示器が自動点灯する自車の最高速度です。この速度を下回っている状態で`OnAngle`の角度までハンドルを回すと方向指示器が自動で点灯します。
+
 #### 角度について
 GTA5におけるハンドルの最大角度は40度とのことです。40度までの値であればスクリプトModは自動消灯機能を正常に実行できると思います。
+
+#### OnSpeedの速度について
+スピードメーターModやダッシュボードの速度計に表示される数値とは合致しない可能性があります。そのため、おおよその値を設定してください。
 
 ## 使い方
 ### 本体編
@@ -113,6 +134,8 @@ iniファイルにて**Enabled**を*True*にしているとゲームロード時
 **Autooff**を*True*にしていて、設定が正しい場合は右左折が終わると自動で方向指示器が消灯します。（バイクを除く）
 
 **KeyboardComp**を*True*にしている場合はAutooffDurationで指定したミリ秒後に方向指示器が自動消灯します。
+
+**Autoon**を*True*にしていて、条件を満たしている場合は方向指示器が自動点灯します。
 
 ### Localization.ini編
 スクリプトModから送信されるメッセージの内容を編集できます。
