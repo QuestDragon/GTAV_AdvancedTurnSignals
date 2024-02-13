@@ -124,6 +124,7 @@ namespace AdvancedTurnSignals
             {"X", Control.ScriptRLeft },
             {"Select", Control.ScriptSelect }
         };
+        private List<Keys> ActiveKeys = new List<Keys>();
 
         #endregion
 
@@ -574,7 +575,10 @@ namespace AdvancedTurnSignals
 #endif
                 da = Task.Run(() => { digital_autooff(); });
             }
-            Button_Lock--; //コントローラー操作を受け付ける
+            if (ActiveKeys.Contains(e.KeyCode))
+            {
+                ActiveKeys.Remove(e.KeyCode);
+            }
         }
 
         /// <summary>
@@ -688,11 +692,12 @@ namespace AdvancedTurnSignals
             }
         }
 
-        private int Button_Lock = 0;
-
         private async void keyDown(object sender, KeyEventArgs e)
         {
-            Button_Lock++; //コントローラー用操作を受け付けない
+            if (!ActiveKeys.Contains(e.KeyCode))
+            {
+                ActiveKeys.Add(e.KeyCode);
+            }
             Vehicle cv = Game.Player.Character.CurrentVehicle;
 
             if (enabled && cv != null && new Keys[] { left,right,hazard }.Contains(e.KeyCode)) //有効かつ車に乗っているかつ設定したキーバインドが押されている
@@ -737,7 +742,7 @@ namespace AdvancedTurnSignals
         private void controller(Vehicle cv)
         { 
 
-            if (enabled && cv != null && available(cv) && Button_Lock == 0) //有効かつ方向指示器が動作できる車に乗っており、ロックを受けていない
+            if (enabled && cv != null && available(cv) && ActiveKeys.Count == 0) //有効かつ方向指示器が動作できる車に乗っており、キーが押されていない
             {
                 if (Game.IsControlJustPressed(leftC))
                 {
@@ -811,8 +816,10 @@ namespace AdvancedTurnSignals
                 ts.Dispose();
                 ts= null;
             }
-
-            if (use_button && Button_Lock == 0) //ボタン設定を使用する場合
+#if DEBUG
+            GTA.UI.Screen.ShowSubtitle(ActiveKeys.Count.ToString());
+#endif
+            if (use_button && ActiveKeys.Count == 0) //ボタン設定を使用する場合
             {
                 controller(cv);
             }
