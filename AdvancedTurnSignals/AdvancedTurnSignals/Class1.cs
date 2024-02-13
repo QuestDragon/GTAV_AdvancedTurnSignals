@@ -7,13 +7,12 @@ using GTA;
 using System.Runtime.InteropServices;
 using System.Windows.Forms; // KeyEventArgs用
 using GTA.UI;
-using GTA.Math;
 using System.Media;
 using System.IO;
-using System.Runtime.InteropServices.ComTypes;
 using System.Xml.Linq;
-using GTA.NaturalMotion;
 using System.Reflection;
+using Control = GTA.Control;
+using GTA.NaturalMotion;
 
 namespace AdvancedTurnSignals
 {
@@ -23,24 +22,36 @@ namespace AdvancedTurnSignals
         //iniファイルの読み込みに必要な処理。Pythonのimport文、C#のUsing文の派生版みたいなもんよ
         [DllImport("kernel32.dll", EntryPoint = "GetPrivateProfileStringW", CharSet = CharSet.Unicode, SetLastError = true)]
         static extern uint GetPrivateProfileString(string lpAppName, string lpKeyName, string lpDefault, StringBuilder lpReturnedString, uint nSize, string lpFileName);
-        private static Keys left; //キー設定を用意
-        private static Keys right; //キー設定を用意
-        private static Keys hazard; //キー設定を用意
-        private static Keys escape = Keys.Escape; //キー設定を用意
-        private static Keys pause1; //キー設定を用意
-        private static Keys pause2; //キー設定を用意
-        private static bool enabled = true; //有効または無効
-        private static bool autooff = true; //自動消灯
-        private static bool keyboard_comp = false; //キーボード互換モード
-        private static string raw_autooff_duration = "1000"; //キーを離してから方向指示器が自動で消えるまでの時間
-        private static int autooff_duration = 1000; //キーを離してから方向指示器が自動で消えるまでの時間
-        private static string raw_ready_angle = "15"; //自動消灯に最低限必要な角度
-        private static string raw_off_angle = "10"; //自動消灯する角度
-        private static Single ready_angle = 15; //自動消灯に最低限必要な角度(コード内で使用)
-        private static Single off_angle = 10; //自動消灯する角度(コード内で使用)
-        private static Single? toggle_angle = null; //ウインカーと反対側にハンドルを切った場合に使用する。
-        public static bool use_sound = true;
-        public static bool inter_sound = true; //カスタムサウンドロード失敗時にデフォルトサウンドを使用するかのフラグ
+        private  Keys left; //キー設定を用意
+        private  Keys right; //キー設定を用意
+        private  Keys hazard; //キー設定を用意
+        private  Keys escape = Keys.Escape; //キー設定を用意
+        private  Keys pause1; //キー設定を用意
+        private  Keys pause2; //キー設定を用意
+        private  bool use_button = false; //ボタン設定を使用するか
+        private  string raw_leftC; //ボタン設定を用意
+        private  string raw_rightC; //ボタン設定を用意
+        private  string raw_hazardC; //ボタン設定を用意
+        private  Control leftC; //ボタン設定を用意
+        private  Control rightC; //ボタン設定を用意
+        private  Control hazardC; //ボタン設定を用意
+        private  bool enabled = true; //有効または無効
+        private  bool autooff = true; //自動消灯
+        private  bool keyboard_comp = false; //キーボード互換モード
+        private  string raw_autooff_duration = "1000"; //キーを離してから方向指示器が自動で消えるまでの時間
+        private  int autooff_duration = 1000; //キーを離してから方向指示器が自動で消えるまでの時間
+        private  string raw_ready_angle = "15"; //自動消灯に最低限必要な角度
+        private  string raw_off_angle = "10"; //自動消灯する角度
+        private  Single ready_angle = 15; //自動消灯に最低限必要な角度(コード内で使用)
+        private  Single off_angle = 10; //自動消灯する角度(コード内で使用)
+        private  Single? toggle_angle = null; //ウインカーと反対側にハンドルを切った場合に使用する。
+        private  bool autoon = false; //自動点灯
+        private  string raw_on_angle = "10"; //自動点灯する角度
+        private  Single on_angle = 10; //自動点灯に最低限必要な角度(コード内で使用)
+        private  string raw_on_speed = "10"; //自動点灯する速度
+        private  Single on_speed = 10; //自動点灯できる最高速度(コード内で使用)
+        private  bool use_sound = true;
+        private  bool inter_sound = true; //カスタムサウンドロード失敗時にデフォルトサウンドを使用するかのフラグ
         #endregion
 
         //最大角度：バニラで-+40
@@ -56,10 +67,10 @@ namespace AdvancedTurnSignals
             VehicleClass.Trains
         };
 
-        static bool turn_left = false; //ハザード用
-        static bool turn_right = false;
-        static bool is_hazard = false; //ハザード状態か
-        static bool off_ready = false; //自動消灯アングルまでハンドルが切られているか
+         bool turn_left = false; //ハザード用
+         bool turn_right = false;
+         bool is_hazard = false; //ハザード状態か
+         bool off_ready = false; //自動消灯アングルまでハンドルが切られているか
 
         //サウンド関連
         XElement xml = null; //XML File
@@ -85,16 +96,33 @@ namespace AdvancedTurnSignals
             {"warning", "" },
             {"error", "" },
             {"loaded", "" },
-            {"readyangle_warn", "" },
             {"duration_warn", "" },
-            {"offangle_warn", "" },
-            {"overangle_warn", "" },
+            {"num_warn", "" },
+            {"overnum_warn", "" },
             {"overangle_err", "" },
             {"audio_warn", "" },
             {"default_warn", "" },
             {"audio_err", "" },
             {"tips", "" },
             {"reload_tips", "" }
+        };
+        private Dictionary<string,Control> Buttons = new Dictionary<string, Control>
+        {
+            {"LB", Control.ScriptLB},
+            { "LS", Control.ScriptLS },
+            {"LT", Control.ScriptLT },
+            {"PadDown", Control.ScriptPadDown },
+            {"PadLeft", Control.ScriptPadLeft },
+            {"PadRight", Control.ScriptPadRight },
+            {"PadUp", Control.ScriptPadUp },
+            {"RB", Control.ScriptRB },
+            {"RS", Control.ScriptRS },
+            {"RT", Control.ScriptRT },
+            {"A", Control.ScriptRDown },
+            {"B", Control.ScriptRRight },
+            {"Y", Control.ScriptRUp },
+            {"X", Control.ScriptRLeft },
+            {"Select", Control.ScriptSelect }
         };
 
         #endregion
@@ -107,6 +135,10 @@ namespace AdvancedTurnSignals
             left = ini.GetValue<Keys>("Keys", "Left", Keys.J);
             right = ini.GetValue<Keys>("Keys", "Right", Keys.K);
             hazard = ini.GetValue<Keys>("Keys", "Hazard", Keys.I);
+            use_button = ini.GetValue<bool>("Buttons", "UseButton", false);
+            raw_leftC = ini.GetValue<string>("Buttons", "Left", "LB");
+            raw_rightC = ini.GetValue<string>("Buttons", "Right", "RB");
+            raw_hazardC = ini.GetValue<string>("Buttons", "Hazard", "PadUp");
             pause1 = ini.GetValue<Keys>("Keys", "PrimaryPause", Keys.P);
             pause2 = ini.GetValue<Keys>("Keys", "SecondaryPause", Keys.None);
             enabled = ini.GetValue<bool>("General", "Enabled", true);
@@ -118,6 +150,10 @@ namespace AdvancedTurnSignals
             raw_off_angle = ini.GetValue<string>("Autooff", "OffAngle", "10");
             keyboard_comp = ini.GetValue<bool>("Autooff", "KeyboardComp", false);
             raw_autooff_duration = ini.GetValue<string>("Autooff", "AutooffDuration", "1000");
+
+            autoon = ini.GetValue<bool>("Autoon", "Autoon", false);
+            raw_on_angle = ini.GetValue<string>("Autoon", "OnAngle", "10");
+            raw_on_speed = ini.GetValue<string>("Autoon", "OnSpeed", "10");
             #endregion
 
 
@@ -132,9 +168,9 @@ namespace AdvancedTurnSignals
             localizations["error"] = local.GetValue<string>("Level", "Error", "~r~Error");
 
             localizations["loaded"] = local.GetValue<string>("Message", "Loaded", "~g~has loaded!");
-            localizations["readyangle_warn"] = local.GetValue<string>("Message", "ReadyAngleWarn", "~y~{0} ~r~in ReadyAngle is ~h~not a number. ~h~~n~~o~The default number ~b~(15) ~o~will be used.");
-            localizations["offangle_warn"] = local.GetValue<string>("Message", "OffAngleWarn", "~y~{0} ~r~in OffAngle is ~h~not a number. ~h~~n~~o~The default number ~b~(10) ~o~will be used.");
-            localizations["overangle_warn"] = local.GetValue<string>("Message", "OverAngleWarn", "~o~There are settings where the steering wheel angle exceeds GTA5's maximum steering angle of ~h~40 ~h~~o~degrees.~n~The script will continue to work, ~y~but the turn signal ~h~may not turn off automatically.");
+            localizations["button_warn"] = local.GetValue<string>("Message", "ButtonWarn", "~r~The ~y~{0} ~r~controller button specification is ~h~incorrect. ~h~~n~~o~The default value ~b~({1})~o~ is used.");
+            localizations["num_warn"] = local.GetValue<string>("Message", "NumWarn", "~y~{0} ~r~in {1} is ~h~not a number. ~h~~n~~o~The default number ~b~({2}) ~o~will be used.");
+            localizations["overnum_warn"] = local.GetValue<string>("Message", "OverAngleWarn", "~o~There are settings where the steering wheel angle exceeds GTA5's maximum steering angle of ~h~40 ~h~~o~degrees.~n~The script will continue to work, ~y~but the turn signal ~h~may not turn off automatically.");
             localizations["overangle_err"] = local.GetValue<string>("Message", "OverAngleErr", "~r~OffAngle value ~y~{0} ~r~cannot be higher than ReadyAngle value ~b~{1}~r~. ~n~~o~Auto-off feature has been ~h~disabled.");
             localizations["duration_warn"] = local.GetValue<string>("Message", "DurationWarn", "~y~{0} ~r~in AutooffDuration is ~h~not a number. ~h~~n~~o~The default number ~b~(1000) ~o~will be used.");
             localizations["audio_warn"] = local.GetValue<string>("Message", "AudioNotFoundWarn", "~r~Audio file ~y~({0})~r~ not found. ~n~~o~AdvancedTurnSignals will continue to work, but ~h~no audio will play~h~ if you perform operations that use the specified audio file.");
@@ -151,9 +187,48 @@ namespace AdvancedTurnSignals
                 KeyDown += keyDown;
                 Tick += onTick;
 
+
                 icon = NotificationIcon.LsCustoms; //ロスサントス・カスタムアイコン
                 Notification.Show(icon, $"{localizations["scriptname"]}~s~ - {localizations["versionchar"]}{ver}", localizations["information"], localizations["loaded"]); //~h~で太字。2回目に使うとそこから先を太字解除。
 
+                #region AdvancedTurnSignals.ini-Load
+
+                if(use_button)
+                {
+                    if (!Buttons.ContainsKey(raw_leftC))
+                    {
+                        string message = localizations["button_warn"];
+                        message = message.Replace("{0}", "Left"); //特定部分を変数の値に置き換える
+                        message = message.Replace("{1}", "LB");
+
+                        icon = NotificationIcon.Blocked; //禁止アイコン
+                        Notification.Show(icon, $"{localizations["scriptname"]}~s~ - {localizations["versionchar"]}{ver}", localizations["warning"], message); //~h~で太字。2回目に使うとそこから先を太字解除。
+                        raw_leftC = "LB";
+                    }
+                    if (!Buttons.ContainsKey(raw_rightC))
+                    {
+                        string message = localizations["button_warn"];
+                        message = message.Replace("{0}", "Right"); //特定部分を変数の値に置き換える
+                        message = message.Replace("{1}", "RB");
+
+                        icon = NotificationIcon.Blocked; //禁止アイコン
+                        Notification.Show(icon, $"{localizations["scriptname"]}~s~ - {localizations["versionchar"]}{ver}", localizations["warning"], message); //~h~で太字。2回目に使うとそこから先を太字解除。
+                        raw_rightC = "RB";
+                    }
+                    if (!Buttons.ContainsKey(raw_hazardC))
+                    {
+                        string message = localizations["button_warn"];
+                        message = message.Replace("{0}", "Hazard"); //特定部分を変数の値に置き換える
+                        message = message.Replace("{1}", "PadUp");
+
+                        icon = NotificationIcon.Blocked; //禁止アイコン
+                        Notification.Show(icon, $"{localizations["scriptname"]}~s~ - {localizations["versionchar"]}{ver}", localizations["warning"], message); //~h~で太字。2回目に使うとそこから先を太字解除。
+                        raw_hazardC = "PadUp";
+                    }
+                    leftC = Buttons[raw_leftC];
+                    rightC = Buttons[raw_rightC];
+                    hazardC = Buttons[raw_hazardC];
+                }
 
                 if (autooff)
                 {
@@ -162,8 +237,10 @@ namespace AdvancedTurnSignals
 
                     if (!float.TryParse(raw_ready_angle, out res)) //数値でない場合
                     {
-                        string message = localizations["readyangle_warn"];
+                        string message = localizations["num_warn"];
                         message = message.Replace("{0}", raw_ready_angle); //特定部分を変数の値に置き換える
+                        message = message.Replace("{1}", "ReadyAngle"); //原因部分を設定項目に置き換える
+                        message = message.Replace("{2}", ready_angle.ToString()); //特定部分を変数の値に置き換える
 
                         icon = NotificationIcon.Blocked; //禁止アイコン
                         Notification.Show(icon, $"{localizations["scriptname"]}~s~ - {localizations["versionchar"]}{ver}", localizations["warning"],message); //~h~で太字。2回目に使うとそこから先を太字解除。
@@ -172,8 +249,10 @@ namespace AdvancedTurnSignals
 
                     if (!float.TryParse(raw_off_angle, out res)) //数値でない場合
                     {
-                        string message = localizations["offangle_warn"];
+                        string message = localizations["num_warn"];
                         message = message.Replace("{0}", raw_off_angle); //特定部分を変数の値に置き換える
+                        message = message.Replace("{1}", "OffAngle"); //原因部分を設定項目に置き換える
+                        message = message.Replace("{2}", off_angle.ToString()); //特定部分を変数の値に置き換える
 
                         icon = NotificationIcon.Blocked; //禁止アイコン
                         Notification.Show(icon, $"{localizations["scriptname"]}~s~ - {localizations["versionchar"]}{ver}", localizations["warning"], message); //~h~で太字。2回目に使うとそこから先を太字解除。
@@ -189,28 +268,64 @@ namespace AdvancedTurnSignals
                         Notification.Show(icon, $"{localizations["scriptname"]}~s~ - {localizations["versionchar"]}{ver}", localizations["warning"], message); //~h~で太字。2回目に使うとそこから先を太字解除。
                         raw_autooff_duration = "1000";
                     }
+                }
+
+                if (autoon)
+                {
+                    float res = 0;
+                    if (!float.TryParse(raw_on_angle, out res)) //数値でない場合
+                    {
+                        string message = localizations["num_warn"];
+                        message = message.Replace("{0}", raw_on_angle); //特定部分を変数の値に置き換える
+                        message = message.Replace("{1}", "OnAngle"); //原因部分を設定項目に置き換える
+                        message = message.Replace("{2}", on_angle.ToString()); //特定部分を変数の値に置き換える
+
+                        icon = NotificationIcon.Blocked; //禁止アイコン
+                        Notification.Show(icon, $"{localizations["scriptname"]}~s~ - {localizations["versionchar"]}{ver}", localizations["warning"], message); //~h~で太字。2回目に使うとそこから先を太字解除。
+                        raw_on_angle = "10";
+                    }
+
+                    if (!float.TryParse(raw_on_speed, out res)) //数値でない場合
+                    {
+                        string message = localizations["num_warn"];
+                        message = message.Replace("{0}", raw_on_speed); //特定部分を変数の値に置き換える
+                        message = message.Replace("{1}", "OnSpeed"); //原因部分を設定項目に置き換える
+                        message = message.Replace("{2}", on_speed.ToString()); //特定部分を変数の値に置き換える
+
+                        icon = NotificationIcon.Blocked; //禁止アイコン
+                        Notification.Show(icon, $"{localizations["scriptname"]}~s~ - {localizations["versionchar"]}{ver}", localizations["warning"], message); //~h~で太字。2回目に使うとそこから先を太字解除。
+                        raw_on_speed = "10";
+                    }
 
                     //使用できる形に変換
                     ready_angle = float.Parse(raw_ready_angle);
                     off_angle = float.Parse(raw_off_angle);
                     autooff_duration = int.Parse(raw_autooff_duration);
-                    if (ready_angle > 40 || off_angle > 40) //GTAVの角度40度を超えた設定の場合
-                    {
-                        icon = NotificationIcon.Blocked; //禁止アイコン
-                        Notification.Show(icon, $"{localizations["scriptname"]}~s~ - {localizations["versionchar"]}{ver}", localizations["warning"], localizations["overangle_warn"]); //~h~で太字。2回目に使うとそこから先を太字解除。
-
-                    }
-                    if (ready_angle < off_angle) //ReadyAngleよりもOffAngleのほうが数値が高い場合
-                    {
-                        string message = localizations["overangle_err"];
-                        message = message.Replace("{0}", off_angle.ToString()); //特定部分を変数の値に置き換える
-                        message = message.Replace("{1}", ready_angle.ToString()); //特定部分を変数の値に置き換える
-
-                        icon = NotificationIcon.LesterDeathwish; //骸骨のアイコン
-                        Notification.Show(icon, $"{localizations["scriptname"]}~s~ - {localizations["versionchar"]}{ver}", localizations["error"], message); //~h~で太字。2回目に使うとそこから先を太字解除。
-                        autooff = false;
-                    }
+                    on_angle = int.Parse(raw_on_angle);
+                    on_speed = int.Parse(raw_on_speed);
                 }
+
+                if (ready_angle > 40 || off_angle > 40 || on_angle > 40) //GTAVの角度40度を超えた設定の場合
+                {
+                    icon = NotificationIcon.Blocked; //禁止アイコン
+                    Notification.Show(icon, $"{localizations["scriptname"]}~s~ - {localizations["versionchar"]}{ver}", localizations["warning"], localizations["overnum_warn"]); //~h~で太字。2回目に使うとそこから先を太字解除。
+
+                }
+                if (ready_angle < off_angle) //ReadyAngleよりもOffAngleのほうが数値が高い場合
+                {
+                    string message = localizations["overangle_err"];
+                    message = message.Replace("{0}", off_angle.ToString()); //特定部分を変数の値に置き換える
+                    message = message.Replace("{1}", ready_angle.ToString()); //特定部分を変数の値に置き換える
+
+                    icon = NotificationIcon.LesterDeathwish; //骸骨のアイコン
+                    Notification.Show(icon, $"{localizations["scriptname"]}~s~ - {localizations["versionchar"]}{ver}", localizations["error"], message); //~h~で太字。2回目に使うとそこから先を太字解除。
+                    autooff = false;
+                }
+
+                #endregion
+
+                #region TurnSignalSoundSetup.xml-Load
+
                 if (use_sound)
                 {
                     bool audiofail = false;
@@ -275,6 +390,8 @@ namespace AdvancedTurnSignals
 
                     }
                 }
+
+                #endregion
             }
 #if DEBUG
             Notification.Show("Advanced turn signals is READY!");
@@ -403,7 +520,7 @@ namespace AdvancedTurnSignals
             }
         }
 
-        private async void signal_autooff()
+        private void signal_autooff()
         {
             if (player != null) //再生中なら一度破棄
             {
@@ -427,6 +544,7 @@ namespace AdvancedTurnSignals
             }
 
         }
+
         private bool digital_OK = false;
         private async void digital_autooff()
         {
@@ -444,21 +562,25 @@ namespace AdvancedTurnSignals
             }
         }
 
+        Task da;
         private void keyUp(object sender, KeyEventArgs e)
         {
             Vehicle cv = Game.Player.Character.CurrentVehicle;
 
             if (enabled && keyboard_comp && cv != null && off_ready && cv.ClassType != VehicleClass.Motorcycles && !black_class_list.Contains(cv.ClassType) && cv.IsLeftIndicatorLightOn | cv.IsRightIndicatorLightOn) //条件に合ったら
             {
+#if DEBUG
                 Notification.Show("Digital Execute");
-                Task t = Task.Run(() => { digital_autooff(); });
+#endif
+                da = Task.Run(() => { digital_autooff(); });
             }
+            Button_Lock--; //コントローラー操作を受け付ける
         }
 
         /// <summary>
         /// 方向指示器が作動できる乗り物であるか
         /// </summary>
-        /// <param name="vehicle">車両オブジェクト</param>
+        /// <param name="vehicle">現在の車両情報</param>
         /// <returns>Trueで方向指示器の作動可能</returns>
         private bool available(Vehicle vehicle)
         {
@@ -469,9 +591,108 @@ namespace AdvancedTurnSignals
             return true;
         }
 
+        Task ts;
+
+        /// <summary>
+        /// 方向指示器の実行
+        /// </summary>
+        /// <param name="state">作動箇所</param>
+        /// <param name="cv">現在の車両情報</param>
+        private void Execute(string state, Vehicle cv)
+        {
+            if (state == "L")
+            {
+                if (use_sound)
+                {
+                    // ウインカー再生
+                    ts = Task.Run(() => { signal_manual(); });
+                }
+
+                if (!is_hazard)
+                {
+                    cv.IsRightIndicatorLightOn = false; //消灯
+                    cv.IsLeftIndicatorLightOn = !cv.IsLeftIndicatorLightOn; //ON/OFF 切り替え
+                    turn_left = cv.IsLeftIndicatorLightOn;
+                    if (cv.IsLeftIndicatorLightOn && autooff) //ウインカー有効時
+                    {
+                        toggle_angle = cv.SteeringAngle;
+                        off_ready = is_off_angle("L"); //自動消灯できる角度まで切っているか
+                        digital_OK = false;
+                    }
+                }
+                else
+                {
+                    turn_left = !turn_left;
+                }
+            }
+            else if (state == "R")
+            {
+                if (use_sound)
+                {
+                    // ウインカー再生
+                    ts = Task.Run(() => { signal_manual(); });
+                }
+                if (!is_hazard)
+                {
+                    cv.IsLeftIndicatorLightOn = false; //消灯
+                    cv.IsRightIndicatorLightOn = !cv.IsRightIndicatorLightOn; //ON/OFF 切り替え
+
+                    turn_right = cv.IsRightIndicatorLightOn;
+                    if (cv.IsRightIndicatorLightOn && autooff)
+                    {
+                        toggle_angle = cv.SteeringAngle;
+                        off_ready = is_off_angle("L"); //自動消灯できる角度まで切っているか
+                        digital_OK = false;
+                    }
+                }
+                else
+                {
+                    turn_right = !turn_right;
+                }
+            }
+            else if (state  == "H")
+            {
+                if (cv.IsLeftIndicatorLightOn && cv.IsRightIndicatorLightOn) //ハザード状態の場合のみ
+                {
+                    cv.IsLeftIndicatorLightOn = turn_left; //前回の状態に戻す
+                    cv.IsRightIndicatorLightOn = turn_right;
+                    is_hazard = false;
+                }
+                else
+                {
+                    turn_left = cv.IsLeftIndicatorLightOn; //状態を保存
+                    turn_right = cv.IsRightIndicatorLightOn;
+
+                    cv.IsRightIndicatorLightOn = true; //点灯
+                    cv.IsLeftIndicatorLightOn = true; //点灯
+                    is_hazard = true;
+                }
+                if (use_sound)
+                {
+                    ts = Task.Run(() => { signal_manual("hazard"); });
+                }
+
+            }
+        }
+
+        private void is_pause()
+        {
+            if (Game.IsPaused) //ポーズ中の場合
+            {
+                if (player != null)
+                {
+                    player.Stop();
+                    player.Dispose();
+                    player = null;
+                }
+            }
+        }
+
+        private int Button_Lock = 0;
+
         private async void keyDown(object sender, KeyEventArgs e)
         {
-
+            Button_Lock++; //コントローラー用操作を受け付けない
             Vehicle cv = Game.Player.Character.CurrentVehicle;
 
             if (enabled && cv != null && new Keys[] { left,right,hazard }.Contains(e.KeyCode)) //有効かつ車に乗っているかつ設定したキーバインドが押されている
@@ -479,98 +700,59 @@ namespace AdvancedTurnSignals
                 bool a = available(cv);
                 if (a) //方向指示器が作動できる乗り物である場合
                 {
-                    if (e.KeyCode == left)
+                    if(e.KeyCode == left)
                     {
-                        if (use_sound)
-                        {
-                            // ウインカー再生
-                            Task t = Task.Run(() => { signal_manual(); });
-                        }
-
-                        if (!is_hazard)
-                        {
-                            cv.IsRightIndicatorLightOn = false; //消灯
-                            cv.IsLeftIndicatorLightOn = !cv.IsLeftIndicatorLightOn; //ON/OFF 切り替え
-                            turn_left = cv.IsLeftIndicatorLightOn;
-                            if (cv.IsLeftIndicatorLightOn && autooff) //ウインカー有効時
-                            {
-                                toggle_angle = cv.SteeringAngle;
-                                off_ready = is_off_angle("L"); //自動消灯できる角度まで切っているか
-                                digital_OK = false;
-                            }
-                        }
-                        else
-                        {
-                            turn_left = !turn_left;
-                        }
+                        Execute("L", cv);
                     }
-                    else if (e.KeyCode == right)
+                    else if(e.KeyCode == right)
                     {
-                        if (use_sound)
-                        {
-                            // ウインカー再生
-                            Task t = Task.Run(() => { signal_manual(); });
-                        }
-                        if (!is_hazard)
-                        {
-                            cv.IsLeftIndicatorLightOn = false; //消灯
-                            cv.IsRightIndicatorLightOn = !cv.IsRightIndicatorLightOn; //ON/OFF 切り替え
-
-                            turn_right = cv.IsRightIndicatorLightOn;
-                            if (cv.IsRightIndicatorLightOn && autooff)
-                            {
-                                toggle_angle = cv.SteeringAngle;
-                                off_ready = is_off_angle("L"); //自動消灯できる角度まで切っているか
-                                digital_OK = false;
-                            }
-                        }
-                        else
-                        {
-                            turn_right = !turn_right;
-                        }
+                        Execute("R", cv);
                     }
-                    else if (e.KeyCode == hazard)
+                    else if(e.KeyCode == hazard)
                     {
-                        if (cv.IsLeftIndicatorLightOn && cv.IsRightIndicatorLightOn) //ハザード状態の場合のみ
-                        {
-                            cv.IsLeftIndicatorLightOn = turn_left; //前回の状態に戻す
-                            cv.IsRightIndicatorLightOn = turn_right;
-                            is_hazard = false;
-                        }
-                        else
-                        {
-                            turn_left = cv.IsLeftIndicatorLightOn; //状態を保存
-                            turn_right = cv.IsRightIndicatorLightOn;
-
-                            cv.IsRightIndicatorLightOn = true; //点灯
-                            cv.IsLeftIndicatorLightOn = true; //点灯
-                            is_hazard = true;
-                        }
-                        if (use_sound)
-                        {
-                            Task t = Task.Run(() => { signal_manual("hazard"); });
-                        }
-
+                        Execute("H", cv);
                     }
-
                 }
             }
 
             if (use_sound && new Keys[] { pause1,pause2,escape }.Contains(e.KeyCode))
             {
                 await Task.Delay(1000);
-                if (Game.IsPaused) //ポーズ中の場合
-                {
-                    if (player != null)
-                    {
-                        player.Stop();
-                        player.Dispose();
-                        player = null;
-                    }
-                }
-
+                is_pause();
             }
 
+            if (enabled && cv != null && available(cv) && autoon) //自動点灯が有効である
+            {
+                if (!cv.IsLeftIndicatorLightOn && cv.SteeringAngle > on_angle && cv.Speed > 0 && cv.Speed * 2 < on_speed) //ウインカー無効＆OnAngleを超えている＆OnSpeed以下である場合
+                {
+                    Execute("L", cv);
+                }
+                else if (!cv.IsRightIndicatorLightOn && cv.SteeringAngle < -on_angle && cv.Speed > 0 && cv.Speed * 2 < on_speed)
+                {
+                    Execute("R", cv);
+                }
+            }
+        }
+
+        private void controller(Vehicle cv)
+        { 
+
+            if (enabled && cv != null && available(cv) && Button_Lock == 0) //有効かつ方向指示器が動作できる車に乗っており、ロックを受けていない
+            {
+                if (Game.IsControlJustPressed(leftC))
+                {
+                    Execute("L", cv);
+                }
+                else if (Game.IsControlJustPressed(rightC))
+                {
+                    Execute("R", cv);
+                }
+                else if (Game.IsControlJustPressed(hazardC))
+                {
+                    Execute("H", cv);
+                }
+            }
+            
         }
 
         //Steering Angle = マイナスが右回し、プラスが左まわし。
@@ -599,8 +781,9 @@ namespace AdvancedTurnSignals
 
         private Vehicle gcv = null;
 
-        private void onTick(object sender, EventArgs e)
+        private async void onTick(object sender, EventArgs e)
         {
+
             Vehicle cv = Game.Player.Character.CurrentVehicle;
             if(cv != gcv) //以前保存した車両と情報が違う場合
             {
@@ -620,8 +803,25 @@ namespace AdvancedTurnSignals
             {
                 player = new SoundPlayer($@"scripts\AdvancedTurnSignals\TurnSignalSounds\{selectedsounds[2]}.wav"); //サウンド再生(loop)
                 player.PlayLooping();
-
             }
+
+            //サウンドが再生されておらず、非同期処理のメモリリソースが解放されていない場合
+            if(ts != null && player == null)
+            {
+                ts.Dispose();
+                ts= null;
+            }
+
+            if (use_button && Button_Lock == 0) //ボタン設定を使用する場合
+            {
+                controller(cv);
+            }
+            if (Game.IsControlJustPressed(Control.FrontendPause))
+            {
+                await Task.Delay(1000);
+                is_pause();
+            }
+
 
             if (autooff && cv != null && cv.ClassType != VehicleClass.Motorcycles) //自動消灯オン+車に乗っている+バイクでない
             {
@@ -637,7 +837,7 @@ namespace AdvancedTurnSignals
 
                             if (use_sound)
                             {
-                                Task t = Task.Run(() => { signal_autooff(); });
+                                ts = Task.Run(() => { signal_autooff(); });
                             }
 
 
@@ -647,9 +847,10 @@ namespace AdvancedTurnSignals
                             cv.IsLeftIndicatorLightOn = false; //消灯
                             off_ready = false;
                             digital_OK= false;
+                            da.Dispose();
                             if (use_sound)
                             {
-                                Task t = Task.Run(() => { signal_autooff(); });
+                                ts = Task.Run(() => { signal_autooff(); });
                             }
                         }
                         else if (!keyboard_comp && off_ready && cv.SteeringAngle < off_angle) //自動消灯条件を満たした場合
@@ -659,7 +860,7 @@ namespace AdvancedTurnSignals
 
                             if (use_sound)
                             {
-                                Task t = Task.Run(() => { signal_autooff(); });
+                                ts = Task.Run(() => { signal_autooff(); });
                             }
                         }
                     }
@@ -674,7 +875,7 @@ namespace AdvancedTurnSignals
 
                             if (use_sound)
                             {
-                                Task t = Task.Run(() => { signal_autooff(); });
+                                ts = Task.Run(() => { signal_autooff(); });
                             }
 
                         }
@@ -683,9 +884,10 @@ namespace AdvancedTurnSignals
                             cv.IsRightIndicatorLightOn = false; //消灯
                             off_ready = false;
                             digital_OK = false;
+                            da.Dispose();
                             if (use_sound)
                             {
-                                Task t = Task.Run(() => { signal_autooff(); });
+                                ts = Task.Run(() => { signal_autooff(); });
                             }
                         }
                         else if (!keyboard_comp &&  off_ready && cv.SteeringAngle > -off_angle)  //自動消灯条件を満たした場合
@@ -695,7 +897,7 @@ namespace AdvancedTurnSignals
 
                             if (use_sound)
                             {
-                                Task t = Task.Run(() => { signal_autooff(); });
+                                ts = Task.Run(() => { signal_autooff(); });
                             }
                         }
                     }
@@ -713,7 +915,7 @@ namespace AdvancedTurnSignals
 
                             if (use_sound)
                             {
-                                Task t = Task.Run(() => { signal_autooff(); });
+                                ts = Task.Run(() => { signal_autooff(); });
                             }
                         }
                         else if (keyboard_comp && off_ready && digital_OK)
@@ -721,9 +923,10 @@ namespace AdvancedTurnSignals
                             turn_left = false; //消灯
                             off_ready = false;
                             digital_OK = false;
+                            da.Dispose();
                             if (use_sound)
                             {
-                                Task t = Task.Run(() => { signal_autooff(); });
+                                ts = Task.Run(() => { signal_autooff(); });
                             }
                         }
                         else if (!keyboard_comp && off_ready && cv.SteeringAngle < off_angle) //自動消灯条件を満たした場合
@@ -733,7 +936,7 @@ namespace AdvancedTurnSignals
 
                             if (use_sound)
                             {
-                                Task t = Task.Run(() => { signal_autooff(); });
+                                ts = Task.Run(() => { signal_autooff(); });
                             }
                         }
                     }
@@ -747,7 +950,7 @@ namespace AdvancedTurnSignals
 
                             if (use_sound)
                             {
-                                Task t = Task.Run(() => { signal_autooff(); });
+                                ts = Task.Run(() => { signal_autooff(); });
                             }
                         }
                         else if (keyboard_comp && off_ready && digital_OK)
@@ -755,9 +958,10 @@ namespace AdvancedTurnSignals
                             turn_right = false; //消灯
                             off_ready = false;
                             digital_OK = false;
+                            da.Dispose();
                             if (use_sound)
                             {
-                                Task t = Task.Run(() => { signal_autooff(); });
+                                ts = Task.Run(() => { signal_autooff(); });
                             }
                         }
                         else if (!keyboard_comp && off_ready && cv.SteeringAngle > -off_angle) //自動消灯条件を満たした場合
@@ -767,7 +971,7 @@ namespace AdvancedTurnSignals
 
                             if (use_sound)
                             {
-                                Task t = Task.Run(() => { signal_autooff(); });
+                                ts = Task.Run(() => { signal_autooff(); });
                             }
                         }
                     }
