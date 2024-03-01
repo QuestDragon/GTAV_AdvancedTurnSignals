@@ -47,7 +47,7 @@ ScriptHookV DotNet Nightlyビルドを導入してGTA5を起動すると、「SC
 
 そのため、今一度次のコンポーネントがインストールされているかご確認ください。
 
-| [.NET Framework 4.8 （ランタイム、開発者ビルドの"両方"が必要です。）](https://dotnet.microsoft.com/download/dotnet-framework/net48) | [Visual C++ Redistributable for Visual Studio 2019 x64](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads) |
+| [.NET Framework 4.8 （ランタイム、開発者パックの"両方"が必要です。）](https://dotnet.microsoft.com/download/dotnet-framework/net48) | [Visual C++ Redistributable for Visual Studio 2019 x64](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads) |
 | ------------- | ------------- |
 
 ## 各種設定
@@ -85,6 +85,7 @@ AdvancedTurnSignalsをコントローラーで使用する際のボタン設定�
 **Hazard**：ハザードランプ切り替え
 
 指定する文字列は次の文字列が使用できます。
+指定が正しくない場合、スクリプトModロード時に一時的にデフォルト設定が読み込まれます。
 
 | LB | LS | LT | PadDown | PadLeft | PadRight | PadUp | RB | RS | RT | A | B | Y | X | Select |
 | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
