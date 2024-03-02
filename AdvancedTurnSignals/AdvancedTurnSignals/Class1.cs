@@ -140,8 +140,8 @@ namespace AdvancedTurnSignals
             raw_leftC = ini.GetValue<string>("Buttons", "Left", "LB");
             raw_rightC = ini.GetValue<string>("Buttons", "Right", "RB");
             raw_hazardC = ini.GetValue<string>("Buttons", "Hazard", "PadUp");
-            pause1 = ini.GetValue<Keys>("Keys", "PrimaryPause", Keys.P);
-            pause2 = ini.GetValue<Keys>("Keys", "SecondaryPause", Keys.None);
+            // pause1 = ini.GetValue<Keys>("Keys", "PrimaryPause", Keys.P);
+            // pause2 = ini.GetValue<Keys>("Keys", "SecondaryPause", Keys.None);
             enabled = ini.GetValue<bool>("General", "Enabled", true);
             use_sound = ini.GetValue<bool>("General", "UseSound", true);
             inter_sound = ini.GetValue<bool>("General", "InterSound", true);
@@ -393,6 +393,8 @@ namespace AdvancedTurnSignals
                 }
 
                 #endregion
+
+                Task.Run(() => { pause_tick(); });
             }
 #if DEBUG
             Notification.Show("Advanced turn signals is READY!");
@@ -547,19 +549,22 @@ namespace AdvancedTurnSignals
         }
 
         private bool digital_OK = false;
+        private bool digital_angled = false;
         private async void digital_autooff()
         {
+            digital_OK = false; //再び待機
             // Notification.Show($"Duration: {autooff_duration}");
             await Task.Delay(autooff_duration); //指定時間経過後に
             if(Math.Abs(Game.Player.Character.CurrentVehicle.SteeringAngle) < off_angle) //自動消灯角度まで戻っている場合
             {
                 // Notification.Show("Digital OK!");
-                digital_OK = true;
+                digital_angled = true;
+                digital_OK= true;
             }
-            else if(!digital_OK) //まだFalseであれば
+            else if(digital_angled) //一度アングルを超えているなら
             {
                 // Notification.Show($"Digital NG! {Math.Abs(Game.Player.Character.CurrentVehicle.SteeringAngle)} / {off_angle}");
-                digital_OK = false;
+                digital_OK = true;
             }
         }
 
@@ -570,9 +575,6 @@ namespace AdvancedTurnSignals
 
             if (enabled && keyboard_comp && cv != null && off_ready && cv.ClassType != VehicleClass.Motorcycles && !black_class_list.Contains(cv.ClassType) && cv.IsLeftIndicatorLightOn | cv.IsRightIndicatorLightOn) //条件に合ったら
             {
-#if DEBUG
-                Notification.Show("Digital Execute");
-#endif
                 da = Task.Run(() => { digital_autooff(); });
             }
             if (ActiveKeys.Contains(e.KeyCode))
@@ -679,6 +681,34 @@ namespace AdvancedTurnSignals
             }
         }
 
+        bool game_pause = false;
+        int pause_judge = 0;
+        private async void pause_tick()
+        {
+            while (true)
+            {
+                await Task.Delay(100);
+                if (game_pause)
+                {
+                    pause_judge++;
+                    if (pause_judge > 3)
+                    {
+                        if (player != null)
+                        {
+                            player.Stop();
+                            player.Dispose();
+                            player = null;
+                        }
+                    }
+                }
+                else
+                {
+                    pause_judge = 0;
+                }
+                game_pause = true;
+            }
+        }
+
         private void is_pause()
         {
             if (Game.IsPaused) //ポーズ中の場合
@@ -720,11 +750,13 @@ namespace AdvancedTurnSignals
                 }
             }
 
+            /*
             if (use_sound && new Keys[] { pause1,pause2,escape }.Contains(e.KeyCode))
             {
                 await Task.Delay(1000);
-                is_pause();
+                // is_pause();
             }
+            */
 
             if (enabled && cv != null && available(cv) && autoon) //自動点灯が有効である
             {
@@ -788,7 +820,7 @@ namespace AdvancedTurnSignals
 
         private async void onTick(object sender, EventArgs e)
         {
-
+            game_pause = false;
             Vehicle cv = Game.Player.Character.CurrentVehicle;
             if(cv != gcv) //以前保存した車両と情報が違う場合
             {
@@ -817,17 +849,19 @@ namespace AdvancedTurnSignals
                 ts= null;
             }
 #if DEBUG
-            GTA.UI.Screen.ShowSubtitle(ActiveKeys.Count.ToString());
+            // GTA.UI.Screen.ShowSubtitle(ActiveKeys.Count.ToString());
 #endif
             if (use_button && ActiveKeys.Count == 0) //ボタン設定を使用する場合
             {
                 controller(cv);
             }
+            /*
             if (Game.IsControlJustPressed(Control.FrontendPause))
             {
                 await Task.Delay(1000);
-                is_pause();
+                // is_pause();
             }
+            */
 
 
             if (autooff && cv != null && cv.ClassType != VehicleClass.Motorcycles) //自動消灯オン+車に乗っている+バイクでない
@@ -854,6 +888,7 @@ namespace AdvancedTurnSignals
                             cv.IsLeftIndicatorLightOn = false; //消灯
                             off_ready = false;
                             digital_OK= false;
+                            digital_angled= false;
                             da.Dispose();
                             if (use_sound)
                             {
@@ -891,6 +926,7 @@ namespace AdvancedTurnSignals
                             cv.IsRightIndicatorLightOn = false; //消灯
                             off_ready = false;
                             digital_OK = false;
+                            digital_angled = false;
                             da.Dispose();
                             if (use_sound)
                             {
@@ -930,6 +966,7 @@ namespace AdvancedTurnSignals
                             turn_left = false; //消灯
                             off_ready = false;
                             digital_OK = false;
+                            digital_angled = false;
                             da.Dispose();
                             if (use_sound)
                             {
@@ -965,6 +1002,7 @@ namespace AdvancedTurnSignals
                             turn_right = false; //消灯
                             off_ready = false;
                             digital_OK = false;
+                            digital_angled = false;
                             da.Dispose();
                             if (use_sound)
                             {
