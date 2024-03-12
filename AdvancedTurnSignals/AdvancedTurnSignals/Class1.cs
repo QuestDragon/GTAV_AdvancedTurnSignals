@@ -13,28 +13,39 @@ using System.Xml.Linq;
 using System.Reflection;
 using Control = GTA.Control;
 using GTA.NaturalMotion;
+using System.Windows.Input;
+using KeyEventArgs = System.Windows.Forms.KeyEventArgs;
 
 namespace AdvancedTurnSignals
 {
     public class Class1 : Script //Scriptは継承。継承すると継承元の情報を利用できる。(この場合はSHV.NETの情報。なお、スクリプト作成には必須。）
     {
         #region AdvancedTurnSignals.ini_variable
-        //iniファイルの読み込みに必要な処理。Pythonのimport文、C#のUsing文の派生版みたいなもんよ
-        [DllImport("kernel32.dll", EntryPoint = "GetPrivateProfileStringW", CharSet = CharSet.Unicode, SetLastError = true)]
-        static extern uint GetPrivateProfileString(string lpAppName, string lpKeyName, string lpDefault, StringBuilder lpReturnedString, uint nSize, string lpFileName);
+
         private  Keys left; //キー設定を用意
         private  Keys right; //キー設定を用意
         private  Keys hazard; //キー設定を用意
+        private  Keys leftM; //キー設定を用意
+        private  Keys rightM; //キー設定を用意
+        private  Keys hazardM; //キー設定を用意
+        /*
         private  Keys escape = Keys.Escape; //キー設定を用意
         private  Keys pause1; //キー設定を用意
         private  Keys pause2; //キー設定を用意
+        */
         private  bool use_button = false; //ボタン設定を使用するか
         private  string raw_leftC; //ボタン設定を用意
         private  string raw_rightC; //ボタン設定を用意
         private  string raw_hazardC; //ボタン設定を用意
+        private  string raw_leftCM; //ボタン設定を用意
+        private  string raw_rightCM; //ボタン設定を用意
+        private  string raw_hazardCM; //ボタン設定を用意
         private  Control leftC; //ボタン設定を用意
         private  Control rightC; //ボタン設定を用意
         private  Control hazardC; //ボタン設定を用意
+        private  Control? leftCM; //ボタン設定を用意(NULL OK)
+        private  Control? rightCM; //ボタン設定を用意(NULL OK)
+        private  Control? hazardCM; //ボタン設定を用意(NULL OK)
         private  bool enabled = true; //有効または無効
         private  bool autooff = true; //自動消灯
         private  bool keyboard_comp = false; //キーボード互換モード
@@ -125,6 +136,7 @@ namespace AdvancedTurnSignals
             {"Select", Control.ScriptSelect }
         };
         private List<Keys> ActiveKeys = new List<Keys>();
+        private List<Control> ActiveControls = new List<Control>();
 
         #endregion
 
@@ -136,10 +148,17 @@ namespace AdvancedTurnSignals
             left = ini.GetValue<Keys>("Keys", "Left", Keys.J);
             right = ini.GetValue<Keys>("Keys", "Right", Keys.K);
             hazard = ini.GetValue<Keys>("Keys", "Hazard", Keys.I);
+            leftM = ini.GetValue<Keys>("Keys", "LeftModifier", Keys.None);
+            rightM = ini.GetValue<Keys>("Keys", "RightModifier", Keys.None);
+            hazardM = ini.GetValue<Keys>("Keys", "HazardModifier", Keys.None);
+
             use_button = ini.GetValue<bool>("Buttons", "UseButton", false);
             raw_leftC = ini.GetValue<string>("Buttons", "Left", "LB");
             raw_rightC = ini.GetValue<string>("Buttons", "Right", "RB");
             raw_hazardC = ini.GetValue<string>("Buttons", "Hazard", "PadUp");
+            raw_leftCM = ini.GetValue<string>("Buttons", "LeftModifier", "None");
+            raw_rightCM = ini.GetValue<string>("Buttons", "RightModifier", "None");
+            raw_hazardCM = ini.GetValue<string>("Buttons", "HazardModifier", "None");
             // pause1 = ini.GetValue<Keys>("Keys", "PrimaryPause", Keys.P);
             // pause2 = ini.GetValue<Keys>("Keys", "SecondaryPause", Keys.None);
             enabled = ini.GetValue<bool>("General", "Enabled", true);
@@ -229,6 +248,67 @@ namespace AdvancedTurnSignals
                     leftC = Buttons[raw_leftC];
                     rightC = Buttons[raw_rightC];
                     hazardC = Buttons[raw_hazardC];
+
+                    if (raw_leftCM.ToLower() != "none" && !Buttons.ContainsKey(raw_leftCM))
+                    {
+                        string message = localizations["button_warn"];
+                        message = message.Replace("{0}", "LeftModifier"); //特定部分を変数の値に置き換える
+                        message = message.Replace("{1}", "None");
+
+                        icon = NotificationIcon.Blocked; //禁止アイコン
+                        Notification.Show(icon, $"{localizations["scriptname"]}~s~ - {localizations["versionchar"]}{ver}", localizations["warning"], message); //~h~で太字。2回目に使うとそこから先を太字解除。
+                        raw_leftCM = "None";
+                        leftCM = null;
+                    }
+                    else if(raw_leftCM.ToLower() != "none")
+                    {
+                        leftCM = Buttons[raw_leftCM];
+                    }
+                    else
+                    {
+                        leftCM = null;
+                    }
+
+                    if (raw_rightCM.ToLower() != "none" && !Buttons.ContainsKey(raw_rightC))
+                    {
+                        string message = localizations["button_warn"];
+                        message = message.Replace("{0}", "RightModifier"); //特定部分を変数の値に置き換える
+                        message = message.Replace("{1}", "None");
+
+                        icon = NotificationIcon.Blocked; //禁止アイコン
+                        Notification.Show(icon, $"{localizations["scriptname"]}~s~ - {localizations["versionchar"]}{ver}", localizations["warning"], message); //~h~で太字。2回目に使うとそこから先を太字解除。
+                        raw_rightCM = "None";
+                        rightCM = null;
+                    }
+                    else if (raw_rightCM.ToLower() != "none")
+                    {
+                        rightCM = Buttons[raw_rightCM];
+                    }
+                    else
+                    {
+                        rightCM = null;
+                    }
+
+                    if (raw_hazardCM.ToLower() != "none" && !Buttons.ContainsKey(raw_hazardC))
+                    {
+                        string message = localizations["button_warn"];
+                        message = message.Replace("{0}", "HazardModifier"); //特定部分を変数の値に置き換える
+                        message = message.Replace("{1}", "None");
+
+                        icon = NotificationIcon.Blocked; //禁止アイコン
+                        Notification.Show(icon, $"{localizations["scriptname"]}~s~ - {localizations["versionchar"]}{ver}", localizations["warning"], message); //~h~で太字。2回目に使うとそこから先を太字解除。
+                        raw_hazardCM = "None";
+                        hazardCM = null;
+                    }
+                    else if (raw_hazardCM.ToLower() != "none")
+                    {
+                        hazardCM = Buttons[raw_hazardCM];
+                    }
+                    else
+                    {
+                        hazardCM = null;
+                    }
+
                 }
 
                 if (autooff)
@@ -568,21 +648,6 @@ namespace AdvancedTurnSignals
             }
         }
 
-        Task da;
-        private void keyUp(object sender, KeyEventArgs e)
-        {
-            Vehicle cv = Game.Player.Character.CurrentVehicle;
-
-            if (enabled && keyboard_comp && cv != null && off_ready && cv.ClassType != VehicleClass.Motorcycles && !black_class_list.Contains(cv.ClassType) && cv.IsLeftIndicatorLightOn | cv.IsRightIndicatorLightOn) //条件に合ったら
-            {
-                da = Task.Run(() => { digital_autooff(); });
-            }
-            if (ActiveKeys.Contains(e.KeyCode))
-            {
-                ActiveKeys.Remove(e.KeyCode);
-            }
-        }
-
         /// <summary>
         /// 方向指示器が作動できる乗り物であるか
         /// </summary>
@@ -701,7 +766,7 @@ namespace AdvancedTurnSignals
                         }
                     }
                 }
-                else
+                else //falseにされたら
                 {
                     pause_judge = 0;
                 }
@@ -709,54 +774,133 @@ namespace AdvancedTurnSignals
             }
         }
 
-        private void is_pause()
+        [DllImport("user32.dll")]
+        private static extern short GetKeyState(int nVirtKey); //仮想キーコードからのキー状態取得メソッド
+        private void LRkeyUp()
         {
-            if (Game.IsPaused) //ポーズ中の場合
+            #region ShiftKey
+            if(GetKeyState(0xA0) < 2 && ActiveKeys.Contains(Keys.LShiftKey)) // LShiftKey
             {
-                if (player != null)
-                {
-                    player.Stop();
-                    player.Dispose();
-                    player = null;
-                }
+                ActiveKeys.Remove(Keys.LShiftKey);
+            }
+            if(GetKeyState(0xA1) < 2 && ActiveKeys.Contains(Keys.RShiftKey)) // RShiftKey
+            {
+                ActiveKeys.Remove(Keys.RShiftKey);
+            }
+            #endregion
+            #region ControlKey
+            if(GetKeyState(0xA2) < 2 && ActiveKeys.Contains(Keys.LControlKey)) // LControlKey
+            {
+                ActiveKeys.Remove(Keys.LControlKey);
+                Notification.Show("REMOVE:L");
+            }
+            if(GetKeyState(0xA3) < 2 && ActiveKeys.Contains(Keys.RControlKey)) // RControlKey
+            {
+                ActiveKeys.Remove(Keys.RControlKey);
+                Notification.Show("REMOVE:R");
+            }
+            #endregion
+            #region AltKey
+            if(GetKeyState(0xA4) < 2 && ActiveKeys.Contains(Keys.LMenu)) // LMenu
+            {
+                ActiveKeys.Remove(Keys.LMenu);
+            }
+            if(GetKeyState(0xA5) < 2 && ActiveKeys.Contains(Keys.RMenu)) // RMenu
+            {
+                ActiveKeys.Remove(Keys.RMenu);
+            }
+            #endregion
+
+        }
+
+        private void LRkeyDown()
+        {
+            #region ShiftKey
+            if (GetKeyState(0xA0) < 0 && !ActiveKeys.Contains(Keys.LShiftKey)) // LShiftKey
+            {
+                ActiveKeys.Add(Keys.LShiftKey);
+            }
+            if(GetKeyState(0xA1) < 0 && !ActiveKeys.Contains(Keys.RShiftKey)) // RShiftKey
+            {
+                ActiveKeys.Add(Keys.RShiftKey);
+            }
+            #endregion
+            #region ControlKey
+            if (GetKeyState(0xA2) < 0 && !ActiveKeys.Contains(Keys.LControlKey)) // LControlKey
+            {
+                ActiveKeys.Add(Keys.LControlKey);
+                Notification.Show("ADD:L");
+            }
+            if(GetKeyState(0xA3) < 0 && !ActiveKeys.Contains(Keys.RControlKey)) // RControlKey
+            {
+                ActiveKeys.Add(Keys.RControlKey);
+                Notification.Show("ADD:R");
+            }
+            #endregion
+            #region AltKey
+            if (GetKeyState(0xA4) < 0 && !ActiveKeys.Contains(Keys.LMenu)) // LMenu
+            {
+                ActiveKeys.Add(Keys.LMenu);
+            }
+            if(GetKeyState(0xA5) < 0 && !ActiveKeys.Contains(Keys.RMenu)) // RMenu
+            {
+                ActiveKeys.Add(Keys.RMenu);
+            }
+            #endregion
+
+        }
+
+        Task da;
+        private void keyUp(object sender, KeyEventArgs e)
+        {
+            Vehicle cv = Game.Player.Character.CurrentVehicle;
+
+            if (enabled && keyboard_comp && cv != null && off_ready && cv.ClassType != VehicleClass.Motorcycles && !black_class_list.Contains(cv.ClassType) && cv.IsLeftIndicatorLightOn | cv.IsRightIndicatorLightOn) //条件に合ったら
+            {
+                da = Task.Run(() => { digital_autooff(); });
+            }
+            if (ActiveKeys.Contains(e.KeyCode))
+            {
+                ActiveKeys.Remove(e.KeyCode);
+            }
+            if (new Keys[] { Keys.ControlKey, Keys.ShiftKey, Keys.Menu }.Contains(e.KeyCode)) // Ctrl, Alt ,Shiftの場合 (下でelseを使わない理由はLR指定をしていない場合の対策)
+            {
+                LRkeyUp();
             }
         }
 
-        private async void keyDown(object sender, KeyEventArgs e)
+        private void keyDown(object sender, KeyEventArgs e)
         {
-            if (!ActiveKeys.Contains(e.KeyCode))
+            if(new Keys[] { Keys.ControlKey, Keys.ShiftKey, Keys.Menu }.Contains(e.KeyCode)) // Ctrl, Alt ,Shiftの場合 (下でelseを使わない理由はLR指定をしていない場合の対策)
+            {
+                LRkeyDown();
+            }
+            if (e.KeyCode != Keys.Escape && !ActiveKeys.Contains(e.KeyCode)) //ESCはゲームがポーズして押しっぱなし判定になってしまうため除外
             {
                 ActiveKeys.Add(e.KeyCode);
             }
             Vehicle cv = Game.Player.Character.CurrentVehicle;
 
-            if (enabled && cv != null && new Keys[] { left,right,hazard }.Contains(e.KeyCode)) //有効かつ車に乗っているかつ設定したキーバインドが押されている
+            if (enabled && cv != null && new Keys[] { left, right, hazard }.Contains(e.KeyCode)) //有効かつ車に乗っているかつ設定したキーバインドが押されている
             {
                 bool a = available(cv);
                 if (a) //方向指示器が作動できる乗り物である場合
                 {
-                    if(e.KeyCode == left)
+                    //修飾キーが押されているか（ない場合は普通に実行）
+                    if (ActiveKeys.Contains(left) && leftM == Keys.None | ActiveKeys.Contains(leftM))
                     {
                         Execute("L", cv);
                     }
-                    else if(e.KeyCode == right)
+                    else if (ActiveKeys.Contains(right) && rightM == Keys.None | ActiveKeys.Contains(rightM))
                     {
                         Execute("R", cv);
                     }
-                    else if(e.KeyCode == hazard)
+                    else if (ActiveKeys.Contains(hazard) && hazardM == Keys.None | ActiveKeys.Contains(hazardM))
                     {
                         Execute("H", cv);
                     }
                 }
             }
-
-            /*
-            if (use_sound && new Keys[] { pause1,pause2,escape }.Contains(e.KeyCode))
-            {
-                await Task.Delay(1000);
-                // is_pause();
-            }
-            */
 
             if (enabled && cv != null && available(cv) && autoon) //自動点灯が有効である
             {
@@ -771,21 +915,83 @@ namespace AdvancedTurnSignals
             }
         }
 
+        bool controller_executed = false; //コントローラーによるウインカー操作がされたか(Trueの場合は操作済みのためExecute呼び出しをしない)
         private void controller(Vehicle cv)
-        { 
-
-            if (enabled && cv != null && available(cv) && ActiveKeys.Count == 0) //有効かつ方向指示器が動作できる車に乗っており、キーが押されていない
+        {
+            #region コントローラリスナ
+            if (Game.IsControlJustPressed(leftC) && !ActiveControls.Contains(leftC))
             {
-                if (Game.IsControlJustPressed(leftC))
+                ActiveControls.Add(leftC);
+            }
+            if (Game.IsControlJustPressed(rightC) && !ActiveControls.Contains(rightC))
+            {
+                ActiveControls.Add(rightC);
+            }
+            if (Game.IsControlJustPressed(hazardC) && !ActiveControls.Contains(hazardC))
+            {
+                ActiveControls.Add(hazardC);
+            }
+            if (leftCM != null && Game.IsControlJustPressed((Control)leftCM) && !ActiveControls.Contains((Control)leftCM)) //キャストでNULL許容型解除
+            {
+                ActiveControls.Add((Control)leftCM);
+            }
+            if (rightCM != null && Game.IsControlJustPressed((Control)rightCM) && !ActiveControls.Contains((Control)rightCM))
+            {
+                ActiveControls.Add((Control)rightCM);
+            }
+            if (hazardCM != null && Game.IsControlJustPressed((Control)hazardCM) && !ActiveControls.Contains((Control)hazardCM))
+            {
+                ActiveControls.Add((Control)hazardCM);
+            }
+
+            if (Game.IsControlJustReleased(leftC) && ActiveControls.Contains(leftC))
+            {
+                ActiveControls.Remove(leftC);
+            }
+            if (Game.IsControlJustReleased(rightC) && ActiveControls.Contains(rightC))
+            {
+                ActiveControls.Remove(rightC);
+            }
+            if (Game.IsControlJustReleased(hazardC) && ActiveControls.Contains(hazardC))
+            {
+                ActiveControls.Remove(hazardC);
+            }
+            if (leftCM != null && Game.IsControlJustReleased((Control)leftCM) && ActiveControls.Contains((Control)leftCM)) //キャストでNULL許容型解除
+            {
+                ActiveControls.Remove((Control)leftCM);
+            }
+            if (rightCM != null && Game.IsControlJustReleased((Control)rightCM) && ActiveControls.Contains((Control)rightCM))
+            {
+                ActiveControls.Remove((Control)rightCM);
+            }
+            if (hazardCM != null && Game.IsControlJustReleased((Control)hazardCM) && ActiveControls.Contains((Control)hazardCM))
+            {
+                ActiveControls.Remove((Control)hazardCM);
+            }
+
+
+            #endregion
+
+            if(ActiveControls.Count == 0) //指定されているコントローラーボタンがすべて離されたら
+            {
+                controller_executed = false; //再度ウインカー操作が可能になる
+            }
+
+            if (enabled && cv != null && available(cv) && ActiveKeys.Count == 0 && !controller_executed) //有効かつ方向指示器が動作できる車に乗っており、キーが押されていない、また、指定したコントローラーのボタンがすべて一度離されている
+            {
+                if (ActiveControls.Contains(leftC) && leftCM == null | ActiveControls.Contains((Control)leftCM))
                 {
+                    controller_executed = true;
                     Execute("L", cv);
                 }
-                else if (Game.IsControlJustPressed(rightC))
+                else if (ActiveControls.Contains(rightC) && rightCM == null | ActiveControls.Contains((Control)rightCM))
                 {
+                    controller_executed = true;
                     Execute("R", cv);
                 }
-                else if (Game.IsControlJustPressed(hazardC))
+                else if (ActiveControls.Contains(hazardC) && hazardCM == null | ActiveControls.Contains((Control)hazardCM))
                 {
+                    controller_executed = true;
                     Execute("H", cv);
                 }
             }
@@ -818,39 +1024,46 @@ namespace AdvancedTurnSignals
 
         private Vehicle gcv = null;
 
-        private async void onTick(object sender, EventArgs e)
+        private void onTick(object sender, EventArgs e)
         {
+
+#if DEBUG
+            GTA.UI.Screen.ShowSubtitle($"Key: {ActiveKeys.Count} / Controls: {ActiveControls.Count}");
+#endif
+
+            if (pause_judge > 3)
+            {
+                ActiveKeys.Clear(); //押しっぱなし判定の対策としてポーズ画面から解除したらリセット
+                ActiveControls.Clear();
+            }
             game_pause = false;
             Vehicle cv = Game.Player.Character.CurrentVehicle;
-            if(cv != gcv) //以前保存した車両と情報が違う場合
+            if (cv != gcv) //以前保存した車両と情報が違う場合
             {
                 gcv = cv; //車両情報更新
-                if(cv != null)
+                if (cv != null)
                 {
                     sounds_load(cv.DisplayName);
                 }
             }
-            if(cv == null && player!= null)  //非乗車状態でサウンドが鳴っている場合
+            if (cv == null && player != null)  //非乗車状態でサウンドが鳴っている場合
             {
                 player.Stop();
                 player.Dispose();
                 player = null;
             }
-            else if(cv != null && player == null && cv.IsLeftIndicatorLightOn | cv.IsRightIndicatorLightOn) //車両乗車時にウインカーが有効の場合
+            else if (cv != null && player == null && cv.IsLeftIndicatorLightOn | cv.IsRightIndicatorLightOn) //車両乗車時にウインカーが有効の場合
             {
                 player = new SoundPlayer($@"scripts\AdvancedTurnSignals\TurnSignalSounds\{selectedsounds[2]}.wav"); //サウンド再生(loop)
                 player.PlayLooping();
             }
 
             //サウンドが再生されておらず、非同期処理のメモリリソースが解放されていない場合
-            if(ts != null && player == null)
+            if (ts != null && player == null)
             {
                 ts.Dispose();
-                ts= null;
+                ts = null;
             }
-#if DEBUG
-            // GTA.UI.Screen.ShowSubtitle(ActiveKeys.Count.ToString());
-#endif
             if (use_button && ActiveKeys.Count == 0) //ボタン設定を使用する場合
             {
                 controller(cv);
@@ -883,12 +1096,12 @@ namespace AdvancedTurnSignals
 
 
                         }
-                        else if(keyboard_comp && off_ready && digital_OK)
+                        else if (keyboard_comp && off_ready && digital_OK)
                         {
                             cv.IsLeftIndicatorLightOn = false; //消灯
                             off_ready = false;
-                            digital_OK= false;
-                            digital_angled= false;
+                            digital_OK = false;
+                            digital_angled = false;
                             da.Dispose();
                             if (use_sound)
                             {
@@ -933,7 +1146,7 @@ namespace AdvancedTurnSignals
                                 ts = Task.Run(() => { signal_autooff(); });
                             }
                         }
-                        else if (!keyboard_comp &&  off_ready && cv.SteeringAngle > -off_angle)  //自動消灯条件を満たした場合
+                        else if (!keyboard_comp && off_ready && cv.SteeringAngle > -off_angle)  //自動消灯条件を満たした場合
                         {
                             cv.IsRightIndicatorLightOn = false; //消灯
                             off_ready = false;
