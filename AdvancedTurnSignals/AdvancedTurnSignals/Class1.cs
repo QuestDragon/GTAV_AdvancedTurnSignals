@@ -675,7 +675,7 @@ namespace AdvancedTurnSignals
             {
                 if (use_sound)
                 {
-                    // ウインカー再生
+                    // ウインカー再生 (非同期）
                     ts = Task.Run(() => { signal_manual(); });
                 }
 
@@ -700,7 +700,7 @@ namespace AdvancedTurnSignals
             {
                 if (use_sound)
                 {
-                    // ウインカー再生
+                    // ウインカー再生 (非同期）
                     ts = Task.Run(() => { signal_manual(); });
                 }
                 if (!is_hazard)
@@ -740,6 +740,7 @@ namespace AdvancedTurnSignals
                 }
                 if (use_sound)
                 {
+                    // ウインカー再生 (非同期）
                     ts = Task.Run(() => { signal_manual("hazard"); });
                 }
 
@@ -779,33 +780,31 @@ namespace AdvancedTurnSignals
         private void LRkeyUp()
         {
             #region ShiftKey
-            if(GetKeyState(0xA0) < 2 && ActiveKeys.Contains(Keys.LShiftKey)) // LShiftKey
+            if(GetKeyState(0xA0) >= 0 && ActiveKeys.Contains(Keys.LShiftKey)) // LShiftKey
             {
                 ActiveKeys.Remove(Keys.LShiftKey);
             }
-            if(GetKeyState(0xA1) < 2 && ActiveKeys.Contains(Keys.RShiftKey)) // RShiftKey
+            if(GetKeyState(0xA1) >= 0 && ActiveKeys.Contains(Keys.RShiftKey)) // RShiftKey
             {
                 ActiveKeys.Remove(Keys.RShiftKey);
             }
             #endregion
             #region ControlKey
-            if(GetKeyState(0xA2) < 2 && ActiveKeys.Contains(Keys.LControlKey)) // LControlKey
+            if(GetKeyState(0xA2) >= 0 && ActiveKeys.Contains(Keys.LControlKey)) // LControlKey
             {
                 ActiveKeys.Remove(Keys.LControlKey);
-                Notification.Show("REMOVE:L");
             }
-            if(GetKeyState(0xA3) < 2 && ActiveKeys.Contains(Keys.RControlKey)) // RControlKey
+            if(GetKeyState(0xA3) >= 0 && ActiveKeys.Contains(Keys.RControlKey)) // RControlKey
             {
                 ActiveKeys.Remove(Keys.RControlKey);
-                Notification.Show("REMOVE:R");
             }
             #endregion
             #region AltKey
-            if(GetKeyState(0xA4) < 2 && ActiveKeys.Contains(Keys.LMenu)) // LMenu
+            if(GetKeyState(0xA4) >= 0 && ActiveKeys.Contains(Keys.LMenu)) // LMenu
             {
                 ActiveKeys.Remove(Keys.LMenu);
             }
-            if(GetKeyState(0xA5) < 2 && ActiveKeys.Contains(Keys.RMenu)) // RMenu
+            if(GetKeyState(0xA5) >= 0 && ActiveKeys.Contains(Keys.RMenu)) // RMenu
             {
                 ActiveKeys.Remove(Keys.RMenu);
             }
@@ -829,12 +828,10 @@ namespace AdvancedTurnSignals
             if (GetKeyState(0xA2) < 0 && !ActiveKeys.Contains(Keys.LControlKey)) // LControlKey
             {
                 ActiveKeys.Add(Keys.LControlKey);
-                Notification.Show("ADD:L");
             }
             if(GetKeyState(0xA3) < 0 && !ActiveKeys.Contains(Keys.RControlKey)) // RControlKey
             {
                 ActiveKeys.Add(Keys.RControlKey);
-                Notification.Show("ADD:R");
             }
             #endregion
             #region AltKey
