@@ -1,5 +1,5 @@
 # Advanced Turn Signals - Created By QuestDragon
-Version: 1.2.2
+Version: 1.2.3
 ## 作成した経緯
 今日も多数の方向指示器Modがアップロードされていますが、その多くは点灯と消灯を手動で行うものだったり、方向指示器の音がなかったりするものがほとんどでしたので、スクリプト制作の練習も兼ねて作成してみました。
 
@@ -19,6 +19,8 @@ Version: 1.2.2
 スクリプトから送信される通知の表示言語は `scripts\AdvancedTurnSignals\Localization.ini` にて翻訳できます。
 
 コントローラー操作にも対応しています。なお、コントローラーでの方向指示器操作を行わない方のために使用の有無をiniファイルから設定できるようになっています。_（stevensonjnrさん、dustybluesさんからのリクエスト）_
+
+修飾キーや2つのコントローラーボタンを組み合わせることも可能です。_（Reldam88さんからのリクエスト）_
 
 ## 機能追加、フィードバックについて
 制作者は初心者なので何かと至らないところがあると思います。
@@ -67,9 +69,15 @@ AdvancedTurnSignalsで使用するキー設定を変更できます。
 
 **Left**：左方向指示器切り替え
 
+**LeftModifier**：左方向指示器切り替え修飾キー
+
 **Right**：右方向指示器切り替え
 
+**RightModifier**：右方向指示器切り替え修飾キー
+
 **Hazard**：ハザードランプ切り替え
+
+**HazardModifier**：ハザードランプ切り替え修飾キー
 
 指定する文字列は[こちらのサイト](https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.keys?redirectedfrom=MSDN&view=windowsdesktop-7.0)をご確認ください。指定が正しくない場合、スクリプトModロード時に一時的にデフォルト設定が読み込まれます。
 
@@ -80,9 +88,15 @@ AdvancedTurnSignalsをコントローラーで使用する際のボタン設定�
 
 **Left**：左方向指示器切り替え
 
+**LeftModifier**：左方向指示器切り替え修飾ボタン
+
 **Right**：右方向指示器切り替え
 
+**RightModifier**：右方向指示器切り替え修飾ボタン
+
 **Hazard**：ハザードランプ切り替え
+
+**HazardModifier**：ハザードランプ切り替え修飾ボタン
 
 指定する文字列は次の文字列が使用できます。
 指定が正しくない場合、スクリプトModロード時に一時的にデフォルト設定が読み込まれます。
