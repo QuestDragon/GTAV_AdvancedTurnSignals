@@ -655,6 +655,8 @@ namespace AdvancedTurnSignals
         /// <returns>Trueで方向指示器の作動可能</returns>
         private bool available(Vehicle vehicle)
         {
+            if (vehicle == null || !vehicle.Exists()) return false; // v1.2.4：安全チェック追加
+
             if (black_class_list.Contains(vehicle.ClassType))
             {
                 return false;
@@ -915,78 +917,104 @@ namespace AdvancedTurnSignals
         bool controller_executed = false; //コントローラーによるウインカー操作がされたか(Trueの場合は操作済みのためExecute呼び出しをしない)
         private void controller(Vehicle cv)
         {
-            #region コントローラリスナ
-            if (Game.IsControlJustPressed(leftC) && !ActiveControls.Contains(leftC))
+            Control ModifierButton;
+            #region コントローラリスナ_V2
+            // ローカル関数。Controllerメソッド内でのみ使用可能。
+            void AddAC(Control c)
             {
-                ActiveControls.Add(leftC);
+                if (Game.IsControlJustPressed(c) && !ActiveControls.Contains(c))
+                {
+                    ActiveControls.Add(c);
+                }
             }
-            if (Game.IsControlJustPressed(rightC) && !ActiveControls.Contains(rightC))
+            void RemoveAC(Control c)
             {
-                ActiveControls.Add(rightC);
-            }
-            if (Game.IsControlJustPressed(hazardC) && !ActiveControls.Contains(hazardC))
-            {
-                ActiveControls.Add(hazardC);
-            }
-            if (leftCM != null && Game.IsControlJustPressed((Control)leftCM) && !ActiveControls.Contains((Control)leftCM)) //キャストでNULL許容型解除
-            {
-                ActiveControls.Add((Control)leftCM);
-            }
-            if (rightCM != null && Game.IsControlJustPressed((Control)rightCM) && !ActiveControls.Contains((Control)rightCM))
-            {
-                ActiveControls.Add((Control)rightCM);
-            }
-            if (hazardCM != null && Game.IsControlJustPressed((Control)hazardCM) && !ActiveControls.Contains((Control)hazardCM))
-            {
-                ActiveControls.Add((Control)hazardCM);
+                if (Game.IsControlJustReleased(c) && ActiveControls.Contains(c))
+                {
+                    ActiveControls.Remove(c);
+                }
             }
 
-            if (Game.IsControlJustReleased(leftC) && ActiveControls.Contains(leftC))
+            //まずはメインボタンから。
+            AddAC(leftC);
+            AddAC(rightC);
+            AddAC(hazardC);
+            if (leftCM.HasValue) //いわゆるNullチェック
             {
-                ActiveControls.Remove(leftC);
+                ModifierButton = leftCM.Value; //一度変数へ。
+                AddAC(ModifierButton);
             }
-            if (Game.IsControlJustReleased(rightC) && ActiveControls.Contains(rightC))
+            if (rightCM.HasValue)
             {
-                ActiveControls.Remove(rightC);
+                ModifierButton = rightCM.Value;
+                AddAC(ModifierButton);
             }
-            if (Game.IsControlJustReleased(hazardC) && ActiveControls.Contains(hazardC))
+            if (hazardCM.HasValue) 
             {
-                ActiveControls.Remove(hazardC);
-            }
-            if (leftCM != null && Game.IsControlJustReleased((Control)leftCM) && ActiveControls.Contains((Control)leftCM)) //キャストでNULL許容型解除
-            {
-                ActiveControls.Remove((Control)leftCM);
-            }
-            if (rightCM != null && Game.IsControlJustReleased((Control)rightCM) && ActiveControls.Contains((Control)rightCM))
-            {
-                ActiveControls.Remove((Control)rightCM);
-            }
-            if (hazardCM != null && Game.IsControlJustReleased((Control)hazardCM) && ActiveControls.Contains((Control)hazardCM))
-            {
-                ActiveControls.Remove((Control)hazardCM);
+                ModifierButton = hazardCM.Value; 
+                AddAC(ModifierButton);
             }
 
+            RemoveAC(leftC);
+            RemoveAC(rightC);
+            RemoveAC(hazardC);
+
+            if (leftCM.HasValue) //いわゆるNullチェック
+            {
+                ModifierButton = leftCM.Value; //一度変数へ。
+                RemoveAC(ModifierButton);
+            }
+            if (rightCM.HasValue)
+            {
+                ModifierButton = rightCM.Value;
+                RemoveAC(ModifierButton);
+            }
+            if (hazardCM.HasValue)
+            {
+                ModifierButton = hazardCM.Value;
+                RemoveAC(ModifierButton);
+            }
 
             #endregion
 
-            if(ActiveControls.Count == 0) //指定されているコントローラーボタンがすべて離されたら
+            if (ActiveControls.Count == 0) //指定されているコントローラーボタンがすべて離されたら
             {
                 controller_executed = false; //再度ウインカー操作が可能になる
             }
 
             if (enabled && cv != null && available(cv) && ActiveKeys.Count == 0 && !controller_executed) //有効かつ方向指示器が動作できる車に乗っており、キーが押されていない、また、指定したコントローラーのボタンがすべて一度離されている
             {
-                if (ActiveControls.Contains(leftC) && leftCM == null | ActiveControls.Contains((Control)leftCM))
+                // Ver1.2.4修正：!= nullからHasValueプロパティによる比較方式に変更。
+
+                bool leftCMstate = true, rightCMstate = true, hazardCMstate = true;
+                // ModifierButtonを設定している場合は、ActiveControlsに含まれているかどうかをBoolに入れる。
+                if (leftCM.HasValue) //いわゆるNullチェック
+                {
+                    ModifierButton = leftCM.Value; //一度変数へ。
+                    leftCMstate = ActiveControls.Contains(ModifierButton);
+                }
+                if (rightCM.HasValue)
+                {
+                    ModifierButton = rightCM.Value;
+                    rightCMstate = ActiveControls.Contains(ModifierButton);
+                }
+                if (hazardCM.HasValue)
+                {
+                    ModifierButton = hazardCM.Value;
+                    hazardCMstate = ActiveControls.Contains(ModifierButton);
+                }
+
+                if (ActiveControls.Contains(leftC) && leftCMstate)
                 {
                     controller_executed = true;
                     Execute("L", cv);
                 }
-                else if (ActiveControls.Contains(rightC) && rightCM == null | ActiveControls.Contains((Control)rightCM))
+                else if (ActiveControls.Contains(rightC) && rightCMstate)
                 {
                     controller_executed = true;
                     Execute("R", cv);
                 }
-                else if (ActiveControls.Contains(hazardC) && hazardCM == null | ActiveControls.Contains((Control)hazardCM))
+                else if (ActiveControls.Contains(hazardC) && hazardCMstate)
                 {
                     controller_executed = true;
                     Execute("H", cv);
@@ -1023,9 +1051,16 @@ namespace AdvancedTurnSignals
 
         private void onTick(object sender, EventArgs e)
         {
+            game_pause = false;
+            Vehicle cv = Game.Player.Character.CurrentVehicle;
 
 #if DEBUG
-            GTA.UI.Screen.ShowSubtitle($"Key: {ActiveKeys.Count} / Controls: {ActiveControls.Count}");
+            string ss = $"Key: {ActiveKeys.Count} / Controls: {ActiveControls.Count}";
+            if (cv != null)
+            {
+                ss += $"\nAngle: {Math.Floor(cv.SteeringAngle * 100) / 100} ({ready_angle} -> {off_angle})";
+            }
+            GTA.UI.Screen.ShowSubtitle(ss);
 #endif
 
             if (pause_judge > 3)
@@ -1033,8 +1068,6 @@ namespace AdvancedTurnSignals
                 ActiveKeys.Clear(); //押しっぱなし判定の対策としてポーズ画面から解除したらリセット
                 ActiveControls.Clear();
             }
-            game_pause = false;
-            Vehicle cv = Game.Player.Character.CurrentVehicle;
             if (cv != gcv) //以前保存した車両と情報が違う場合
             {
                 gcv = cv; //車両情報更新
