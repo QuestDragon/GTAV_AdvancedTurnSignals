@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-
+using System.Windows.Input;
 using Control = GTA.Control;
 using KeyEventArgs = System.Windows.Forms.KeyEventArgs;
 
@@ -53,7 +53,7 @@ namespace AdvancedTurnSignals
             {"Select", Control.ScriptSelect }
         };
 
-        // readonly = 再代入不可。一度設定（代入）したらそのあとは代入できない。
+        // readonly = 再代入不可。一度設定（代入）したらそのあとはオブジェクトを代入できない。
         // ※今回の例ではHashSetを代入している。この先ActiveKeys = ○○ とはできないが、ActiveKeys.Addなど、HashSetに対しての操作はできる。
         // Android Studioで使われているKotlinのvalと同様の挙動だと思っていい。
         // ちなみに、定数であるConstは宣言と同時に固定値を指定したらあとは書き換え不可。
@@ -62,6 +62,7 @@ namespace AdvancedTurnSignals
         public readonly HashSet<Keys> ActiveKeys = new HashSet<Keys>();
         public readonly HashSet<Control> ActiveControls = new HashSet<Control>();
         private Dictionary<KeyBinds, Keys> KeyboardSettings = new Dictionary<KeyBinds, Keys>()
+        
         {
             {KeyBinds.KeyLeft,  Keys.J},
             {KeyBinds.KeyRight,  Keys.K},
@@ -339,23 +340,26 @@ namespace AdvancedTurnSignals
                 bool rightCMstate = ModifierState(JoyPadSettings[ButtonBinds.ButtonLeftMod]);
                 bool hazardCMstate = ModifierState(JoyPadSettings[ButtonBinds.ButtonLeftMod]);
 
-                // 正直メインボタンはNullにならない（読み込み時に設定が不正の場合はデフォルト値が入るため）
-                Control BtnL = JoyPadSettings[ButtonBinds.ButtonLeft].Value;
-                Control BtnR = JoyPadSettings[ButtonBinds.ButtonRight].Value;
-                Control BtnH = JoyPadSettings[ButtonBinds.ButtonHazard].Value;
+                // メインボタンはNone指定の場合NullになるのでNull許容（読み込み時に設定が不正の場合はデフォルト値のNone、つまりNullが入るため）
+                // v2.0.1修正：Valueは余計。DictなんだからそもそもDict名[Key]でValueは受け取れる。
+                // 　Valueを書いてしまうとValueのValue（？）になってしまい、NullのValueを取る、という意味に変わってしまう。
+                // 　だからSystem.InvalidOperationExceptionになる。
+                Control? BtnL = JoyPadSettings[ButtonBinds.ButtonLeft];
+                Control? BtnR = JoyPadSettings[ButtonBinds.ButtonRight];
+                Control? BtnH = JoyPadSettings[ButtonBinds.ButtonHazard];
 
                 // 動作
-                if (ActiveControls.Contains(BtnL) && leftCMstate)
+                if (BtnL.HasValue && ActiveControls.Contains((Control)BtnL) && leftCMstate)
                 {
                     ControllerInterLock = true; //インターロックON
                     signalController.Activate(cv, IndicatorState.Left, Utils.IsBike(cv));
                 }
-                else if (ActiveControls.Contains(BtnR) && rightCMstate)
+                else if (BtnR.HasValue && ActiveControls.Contains((Control)BtnR) && rightCMstate)
                 {
                     ControllerInterLock = true; //インターロックON
                     signalController.Activate(cv, IndicatorState.Right, Utils.IsBike(cv));
                 }
-                else if (ActiveControls.Contains(BtnH) && hazardCMstate)
+                else if (BtnH.HasValue && ActiveControls.Contains((Control)BtnH) && hazardCMstate)
                 {
                     ControllerInterLock = true; //インターロックON
                     signalController.Activate(cv, IndicatorState.Hazard, Utils.IsBike(cv));
