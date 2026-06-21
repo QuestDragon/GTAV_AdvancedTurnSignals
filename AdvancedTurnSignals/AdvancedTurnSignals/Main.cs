@@ -69,6 +69,7 @@ namespace AdvancedTurnSignals
             Utils.lastTickTime = DateTime.Now; //ゲーム稼働中を知らせる
 
             ScriptController.Update();
+            inputManager.MouseUpDownObserver();
 
 #if DEBUG
             string Aoil = "";

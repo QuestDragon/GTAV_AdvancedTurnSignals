@@ -62,7 +62,7 @@ namespace AdvancedTurnSignals
         public readonly HashSet<Keys> ActiveKeys = new HashSet<Keys>();
         public readonly HashSet<Control> ActiveControls = new HashSet<Control>();
         private Dictionary<KeyBinds, Keys> KeyboardSettings = new Dictionary<KeyBinds, Keys>()
-        
+
         {
             {KeyBinds.KeyLeft,  Keys.J},
             {KeyBinds.KeyRight,  Keys.K},
@@ -144,35 +144,92 @@ namespace AdvancedTurnSignals
 
 
         [DllImport("user32.dll")]
-        private static extern short GetKeyState(int nVirtKey); //仮想キーコードからのキー状態取得メソッド
+        private static extern short GetAsyncKeyState(int vKey); //仮想キーコードからのキー状態取得メソッド
+        public void MouseUpDownObserver() //v2.0.2: マウスボタンはKeyEventArgsでは受け取れないためWin32とTickに任せる
+        {
+            int ActiveKeysCount = ActiveKeys.Count;
+            if ((GetAsyncKeyState((int)Keys.LButton) & 0x8000) != 0)
+            {
+                ActiveKeys.Add(Keys.LButton);
+            }
+            else
+            {
+                ActiveKeys.Remove(Keys.LButton);
+            }
+
+            if ((GetAsyncKeyState((int)Keys.RButton) & 0x8000) != 0)
+            {
+                ActiveKeys.Add(Keys.RButton);
+            }
+            else
+            {
+                ActiveKeys.Remove(Keys.RButton);
+            }
+
+            if ((GetAsyncKeyState((int)Keys.MButton) & 0x8000) != 0)
+            {
+                ActiveKeys.Add(Keys.MButton);
+            }
+            else
+            {
+                ActiveKeys.Remove(Keys.MButton);
+            }
+
+            if ((GetAsyncKeyState((int)Keys.XButton1) & 0x8000) != 0)
+            {
+                ActiveKeys.Add(Keys.XButton1);
+            }
+            else
+            {
+                ActiveKeys.Remove(Keys.XButton1);
+            }
+
+            if ((GetAsyncKeyState((int)Keys.XButton2) & 0x8000) != 0)
+            {
+                ActiveKeys.Add(Keys.XButton2);
+            }
+            else
+            {
+                ActiveKeys.Remove(Keys.XButton2);
+            }
+
+            // キーが押されたら（ActiveKeysが増えたら＝KeyDown）
+            if (ActiveKeys.Count > ActiveKeysCount)
+            {
+                Activator();
+            }
+        }
+
+        [DllImport("user32.dll")]
+        private static extern short GetKeyState(int nVirtKey); //仮想キーコードからのキー状態取得メソッドその2
         private void LRkeyUp()
         {
             #region ShiftKey
-            if (GetKeyState(0xA0) >= 0 && ActiveKeys.Contains(Keys.LShiftKey)) // LShiftKey
+            if (GetKeyState(0xA0) == 0 && ActiveKeys.Contains(Keys.LShiftKey)) // LShiftKey
             {
                 ActiveKeys.Remove(Keys.LShiftKey);
             }
-            if (GetKeyState(0xA1) >= 0 && ActiveKeys.Contains(Keys.RShiftKey)) // RShiftKey
+            if (GetKeyState(0xA1) == 0 && ActiveKeys.Contains(Keys.RShiftKey)) // RShiftKey
             {
                 ActiveKeys.Remove(Keys.RShiftKey);
             }
             #endregion
             #region ControlKey
-            if (GetKeyState(0xA2) >= 0 && ActiveKeys.Contains(Keys.LControlKey)) // LControlKey
+            if (GetKeyState(0xA2) == 0 && ActiveKeys.Contains(Keys.LControlKey)) // LControlKey
             {
                 ActiveKeys.Remove(Keys.LControlKey);
             }
-            if (GetKeyState(0xA3) >= 0 && ActiveKeys.Contains(Keys.RControlKey)) // RControlKey
+            if (GetKeyState(0xA3) == 0 && ActiveKeys.Contains(Keys.RControlKey)) // RControlKey
             {
                 ActiveKeys.Remove(Keys.RControlKey);
             }
             #endregion
             #region AltKey
-            if (GetKeyState(0xA4) >= 0 && ActiveKeys.Contains(Keys.LMenu)) // LMenu
+            if (GetKeyState(0xA4) == 0 && ActiveKeys.Contains(Keys.LMenu)) // LMenu
             {
                 ActiveKeys.Remove(Keys.LMenu);
             }
-            if (GetKeyState(0xA5) >= 0 && ActiveKeys.Contains(Keys.RMenu)) // RMenu
+            if (GetKeyState(0xA5) == 0 && ActiveKeys.Contains(Keys.RMenu)) // RMenu
             {
                 ActiveKeys.Remove(Keys.RMenu);
             }
@@ -217,6 +274,37 @@ namespace AdvancedTurnSignals
 
         #endregion
 
+        /// <summary>
+        /// キー設定を元に、SignalControllerへ動作指示を送ります。
+        /// </summary>
+        private void Activator()
+        {
+            Vehicle cv = Utils.GetCurrentVehicle();
+            if (!ScriptEnabled || cv == null || !Utils.IsIndicatorAvailable(cv)) return;
+
+            Keys KeyL = KeyboardSettings[KeyBinds.KeyLeft];
+            Keys KeyR = KeyboardSettings[KeyBinds.KeyRight];
+            Keys KeyH = KeyboardSettings[KeyBinds.KeyHazard];
+            Keys KeyLm = KeyboardSettings[KeyBinds.KeyLeftMod];
+            Keys KeyRm = KeyboardSettings[KeyBinds.KeyRightMod];
+            Keys KeyHm = KeyboardSettings[KeyBinds.KeyHazardMod];
+
+
+            //修飾キーが押されているか（ない場合は普通に実行）
+            if (ActiveKeys.Contains(KeyL) && KeyLm == Keys.None | ActiveKeys.Contains(KeyLm))
+            {
+                signalController.Activate(cv, IndicatorState.Left, Utils.IsBike(cv));
+            }
+            else if (ActiveKeys.Contains(KeyR) && KeyRm == Keys.None | ActiveKeys.Contains(KeyRm))
+            {
+                signalController.Activate(cv, IndicatorState.Right, Utils.IsBike(cv));
+            }
+            else if (ActiveKeys.Contains(KeyH) && KeyHm == Keys.None | ActiveKeys.Contains(KeyHm))
+            {
+                signalController.Activate(cv, IndicatorState.Hazard, Utils.IsBike(cv));
+            }
+        }
+
         public void OnKeyDown(object sender, KeyEventArgs e)
         {
             // Notification.Show("OnKeyDown!: " + e.KeyCode);
@@ -232,33 +320,7 @@ namespace AdvancedTurnSignals
                 // Notification.Show("KeyAdd!: " + e.KeyCode);
             }
 
-            Vehicle cv = Utils.GetCurrentVehicle();
-            if (!ScriptEnabled || cv == null || !Utils.IsIndicatorAvailable(cv)) return;
-
-            Keys KeyL = KeyboardSettings[KeyBinds.KeyLeft];
-            Keys KeyR = KeyboardSettings[KeyBinds.KeyRight];
-            Keys KeyH = KeyboardSettings[KeyBinds.KeyHazard];
-            Keys KeyLm = KeyboardSettings[KeyBinds.KeyLeftMod];
-            Keys KeyRm = KeyboardSettings[KeyBinds.KeyRightMod];
-            Keys KeyHm = KeyboardSettings[KeyBinds.KeyHazardMod];
-
-
-            if (new Keys[] { KeyL, KeyR, KeyH }.Contains(e.KeyCode)) //有効かつ車に乗っているかつ設定したキーバインドが押されている
-            {
-                //修飾キーが押されているか（ない場合は普通に実行）
-                if (ActiveKeys.Contains(KeyL) && KeyLm == Keys.None | ActiveKeys.Contains(KeyLm))
-                {
-                    signalController.Activate(cv, IndicatorState.Left,Utils.IsBike(cv));
-                }
-                else if (ActiveKeys.Contains(KeyR) && KeyRm == Keys.None | ActiveKeys.Contains(KeyRm))
-                {
-                    signalController.Activate(cv, IndicatorState.Right, Utils.IsBike(cv));
-                }
-                else if (ActiveKeys.Contains(KeyH) && KeyHm == Keys.None | ActiveKeys.Contains(KeyHm))
-                {
-                    signalController.Activate(cv, IndicatorState.Hazard, Utils.IsBike(cv));
-                }
-            }
+            Activator();
         }
 
         public void OnKeyUp(object sender, KeyEventArgs e)
