@@ -141,137 +141,63 @@ namespace AdvancedTurnSignals
         }
 
         #region User32.dll
-
-
         [DllImport("user32.dll")]
         private static extern short GetAsyncKeyState(int vKey); //仮想キーコードからのキー状態取得メソッド
         public void MouseUpDownObserver() //v2.0.2: マウスボタンはKeyEventArgsでは受け取れないためWin32とTickに任せる
         {
-            int ActiveKeysCount = ActiveKeys.Count;
-            if ((GetAsyncKeyState((int)Keys.LButton) & 0x8000) != 0)
+            bool MouseDown = false; //マウスボタンがDownしたらTrue
+            // MouseDownを操作するためのメソッド。Falseの時のみ書き換えできる。Trueになったら書き換え不可。
+            void MouseDownEditor(bool value)
             {
-                ActiveKeys.Add(Keys.LButton);
+                if (!MouseDown) MouseDown = value;
             }
-            else
-            {
-                ActiveKeys.Remove(Keys.LButton);
-            }
+            
+            // HashSetならAddやRemoveで既に存在する場合や、そもそもAddされていない場合でもArgumentExceptionなどは発生しない。安心！
+            // 0x8000って？：押下状態を表すWin32の状態フラグ。他にもいろいろあるが、押しているかどうかの判定ならこれで十分。
+            if ((GetAsyncKeyState((int)Keys.LButton) & 0x8000) != 0) MouseDownEditor(ActiveKeys.Add(Keys.LButton));
+            else ActiveKeys.Remove(Keys.LButton);
 
-            if ((GetAsyncKeyState((int)Keys.RButton) & 0x8000) != 0)
-            {
-                ActiveKeys.Add(Keys.RButton);
-            }
-            else
-            {
-                ActiveKeys.Remove(Keys.RButton);
-            }
+            if ((GetAsyncKeyState((int)Keys.RButton) & 0x8000) != 0) MouseDownEditor(ActiveKeys.Add(Keys.RButton));
+            else ActiveKeys.Remove(Keys.RButton);
 
-            if ((GetAsyncKeyState((int)Keys.MButton) & 0x8000) != 0)
-            {
-                ActiveKeys.Add(Keys.MButton);
-            }
-            else
-            {
-                ActiveKeys.Remove(Keys.MButton);
-            }
+            if ((GetAsyncKeyState((int)Keys.MButton) & 0x8000) != 0) MouseDownEditor(ActiveKeys.Add(Keys.MButton));
+            else ActiveKeys.Remove(Keys.MButton);
 
-            if ((GetAsyncKeyState((int)Keys.XButton1) & 0x8000) != 0)
-            {
-                ActiveKeys.Add(Keys.XButton1);
-            }
-            else
-            {
-                ActiveKeys.Remove(Keys.XButton1);
-            }
+            if ((GetAsyncKeyState((int)Keys.XButton1) & 0x8000) != 0) MouseDownEditor(ActiveKeys.Add(Keys.XButton1));
+            else ActiveKeys.Remove(Keys.XButton1);
 
-            if ((GetAsyncKeyState((int)Keys.XButton2) & 0x8000) != 0)
-            {
-                ActiveKeys.Add(Keys.XButton2);
-            }
-            else
-            {
-                ActiveKeys.Remove(Keys.XButton2);
-            }
+            if ((GetAsyncKeyState((int)Keys.XButton2) & 0x8000) != 0) MouseDownEditor(ActiveKeys.Add(Keys.XButton2));
+            else ActiveKeys.Remove(Keys.XButton2);
 
-            // キーが押されたら（ActiveKeysが増えたら＝KeyDown）
-            if (ActiveKeys.Count > ActiveKeysCount)
+            // MouseDownがTrueなら
+            if (MouseDown)
             {
+                MouseDown = false; //RESET
                 Activator();
             }
+            
         }
 
-        [DllImport("user32.dll")]
-        private static extern short GetKeyState(int nVirtKey); //仮想キーコードからのキー状態取得メソッドその2
-        private void LRkeyUp()
+        /// <summary>
+        /// v2.0.3実装：修飾キーの押下状態をActiveKeysに反映させるメソッド
+        /// </summary>
+        private void ModifierKeyUpDown()
         {
-            #region ShiftKey
-            if (GetKeyState(0xA0) == 0 && ActiveKeys.Contains(Keys.LShiftKey)) // LShiftKey
-            {
-                ActiveKeys.Remove(Keys.LShiftKey);
-            }
-            if (GetKeyState(0xA1) == 0 && ActiveKeys.Contains(Keys.RShiftKey)) // RShiftKey
-            {
-                ActiveKeys.Remove(Keys.RShiftKey);
-            }
-            #endregion
-            #region ControlKey
-            if (GetKeyState(0xA2) == 0 && ActiveKeys.Contains(Keys.LControlKey)) // LControlKey
-            {
-                ActiveKeys.Remove(Keys.LControlKey);
-            }
-            if (GetKeyState(0xA3) == 0 && ActiveKeys.Contains(Keys.RControlKey)) // RControlKey
-            {
-                ActiveKeys.Remove(Keys.RControlKey);
-            }
-            #endregion
-            #region AltKey
-            if (GetKeyState(0xA4) == 0 && ActiveKeys.Contains(Keys.LMenu)) // LMenu
-            {
-                ActiveKeys.Remove(Keys.LMenu);
-            }
-            if (GetKeyState(0xA5) == 0 && ActiveKeys.Contains(Keys.RMenu)) // RMenu
-            {
-                ActiveKeys.Remove(Keys.RMenu);
-            }
-            #endregion
+            if ((GetAsyncKeyState((int)Keys.LShiftKey) & 0x8000) != 0) ActiveKeys.Add(Keys.LShiftKey);
+            else ActiveKeys.Remove(Keys.LShiftKey);
+            if ((GetAsyncKeyState((int)Keys.RShiftKey) & 0x8000) != 0) ActiveKeys.Add(Keys.RShiftKey);
+            else ActiveKeys.Remove(Keys.RShiftKey);
 
+            if ((GetAsyncKeyState((int)Keys.LControlKey) & 0x8000) != 0) ActiveKeys.Add(Keys.LControlKey);
+            else ActiveKeys.Remove(Keys.LControlKey);
+            if ((GetAsyncKeyState((int)Keys.RControlKey) & 0x8000) != 0) ActiveKeys.Add(Keys.RControlKey);
+            else ActiveKeys.Remove(Keys.RControlKey);
+
+            if ((GetAsyncKeyState((int)Keys.LMenu) & 0x8000) != 0) ActiveKeys.Add(Keys.LMenu);
+            else ActiveKeys.Remove(Keys.LMenu);
+            if ((GetAsyncKeyState((int)Keys.RMenu) & 0x8000) != 0) ActiveKeys.Add(Keys.RMenu);
+            else ActiveKeys.Remove(Keys.RMenu);
         }
-
-        private void LRkeyDown()
-        {
-            #region ShiftKey
-            if (GetKeyState(0xA0) < 0 && !ActiveKeys.Contains(Keys.LShiftKey)) // LShiftKey
-            {
-                ActiveKeys.Add(Keys.LShiftKey);
-            }
-            if (GetKeyState(0xA1) < 0 && !ActiveKeys.Contains(Keys.RShiftKey)) // RShiftKey
-            {
-                ActiveKeys.Add(Keys.RShiftKey);
-            }
-            #endregion
-            #region ControlKey
-            if (GetKeyState(0xA2) < 0 && !ActiveKeys.Contains(Keys.LControlKey)) // LControlKey
-            {
-                ActiveKeys.Add(Keys.LControlKey);
-            }
-            if (GetKeyState(0xA3) < 0 && !ActiveKeys.Contains(Keys.RControlKey)) // RControlKey
-            {
-                ActiveKeys.Add(Keys.RControlKey);
-            }
-            #endregion
-            #region AltKey
-            if (GetKeyState(0xA4) < 0 && !ActiveKeys.Contains(Keys.LMenu)) // LMenu
-            {
-                ActiveKeys.Add(Keys.LMenu);
-            }
-            if (GetKeyState(0xA5) < 0 && !ActiveKeys.Contains(Keys.RMenu)) // RMenu
-            {
-                ActiveKeys.Add(Keys.RMenu);
-            }
-            #endregion
-
-        }
-
         #endregion
 
         /// <summary>
@@ -312,9 +238,10 @@ namespace AdvancedTurnSignals
             // Ctrl, Alt ,Shiftの場合 (下でelseを使わない理由はLR指定をしていない場合の対策。LRタイプと共通タイプの2種類が一度に追加されてしまうが、まあ仕方ない。)
             if (new Keys[] { Keys.ControlKey, Keys.ShiftKey, Keys.Menu }.Contains(e.KeyCode))
             {
-                LRkeyDown();
+                ModifierKeyUpDown();
             }
-            if (e.KeyCode != Keys.Escape && !ActiveKeys.Contains(e.KeyCode)) //ESCはゲームがポーズして押しっぱなし判定になってしまうため除外
+            //ESCはゲームがポーズして押しっぱなし判定になってしまうため除外。v2.0.3: 修飾キーはLR判定したいので共通修飾キーはAddしない。 ※バグの元
+            if (!new Keys[] { Keys.Escape, Keys.ControlKey, Keys.ShiftKey, Keys.Menu }.Contains(e.KeyCode) && !ActiveKeys.Contains(e.KeyCode)) 
             {
                 ActiveKeys.Add(e.KeyCode);
                 // Notification.Show("KeyAdd!: " + e.KeyCode);
@@ -329,7 +256,7 @@ namespace AdvancedTurnSignals
             // Ctrl, Alt ,Shiftの場合 (下でelseを使わない理由はLR指定をしていない場合の対策)
             if (new Keys[] { Keys.ControlKey, Keys.ShiftKey, Keys.Menu }.Contains(e.KeyCode))
             {
-                LRkeyUp();
+                ModifierKeyUpDown();
             }
 
             Vehicle cv = Utils.GetCurrentVehicle();

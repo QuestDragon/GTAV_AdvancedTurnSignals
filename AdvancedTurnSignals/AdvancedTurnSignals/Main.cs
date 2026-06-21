@@ -72,19 +72,20 @@ namespace AdvancedTurnSignals
             inputManager.MouseUpDownObserver();
 
 #if DEBUG
+            // デバッグ用途のいろいろ。
             string Aoil = "";
             string ss = "";
             if (ScriptController.AutoOffInterlock) Aoil = "~r~[LOCK]~s~";
 
-            /*
+            const bool ShowActiveKeysDetail = true; //ActiveKeysの中身を見たい場合はTrueにしてビルド。
             string kk = "";
             foreach (Keys k in inputManager.ActiveKeys)
             {
                 kk += k + ", ";
             }
 
-            ss += "ActiveKeys: [" + kk + "]";
-            */
+            if (ShowActiveKeysDetail) ss += "ActiveKeys: [" + kk + "]";
+            
             ss += $"\nKeys: {inputManager.ActiveKeys.Count} / Controls: {inputManager.ActiveControls.Count} {Aoil}";
             // ss += $"\nisPause: {Utils.game_pause} / Cancel: {PauseTickCanceller.Token.IsCancellationRequested}";
             Vehicle cv = Utils.GetCurrentVehicle();
