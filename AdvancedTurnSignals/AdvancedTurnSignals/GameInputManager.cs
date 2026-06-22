@@ -12,6 +12,22 @@ using KeyEventArgs = System.Windows.Forms.KeyEventArgs;
 
 namespace AdvancedTurnSignals
 {
+    /// <summary>
+    /// Advanced Turn Signalsを操作するためのキーとインターロック状態を保持するクラス。
+    /// </summary>
+    public class OperateKeys
+    {
+        // アクセサ
+        public Keys KeyCode { get; private set; } //代入できるのはこのクラス内のみ。外部から代入する場合はメソッドを通す必要がある。
+        public bool Locked { get; set; }
+        //コンストラクタ
+        public OperateKeys(Keys keycode)
+        {
+            this.KeyCode = keycode;
+            this.Locked = false; //初期状態はインターロックなし
+        }
+    }
+
     public class GameInputManager
     {
         private enum KeyBinds
@@ -61,15 +77,15 @@ namespace AdvancedTurnSignals
         private readonly SignalController signalController;
         public readonly HashSet<Keys> ActiveKeys = new HashSet<Keys>();
         public readonly HashSet<Control> ActiveControls = new HashSet<Control>();
-        private Dictionary<KeyBinds, Keys> KeyboardSettings = new Dictionary<KeyBinds, Keys>()
+        private Dictionary<KeyBinds, OperateKeys> KeyboardSettings = new Dictionary<KeyBinds, OperateKeys>()
 
         {
-            {KeyBinds.KeyLeft,  Keys.J},
-            {KeyBinds.KeyRight,  Keys.K},
-            {KeyBinds.KeyHazard,  Keys.I},
-            {KeyBinds.KeyLeftMod,  Keys.None},
-            {KeyBinds.KeyRightMod,  Keys.None},
-            {KeyBinds.KeyHazardMod,  Keys.None}
+            {KeyBinds.KeyLeft,  new OperateKeys(Keys.J)},
+            {KeyBinds.KeyRight,  new OperateKeys(Keys.K)},
+            {KeyBinds.KeyHazard,  new OperateKeys(Keys.I)},
+            {KeyBinds.KeyLeftMod,  new OperateKeys(Keys.None)},
+            {KeyBinds.KeyRightMod,  new OperateKeys(Keys.None)},
+            {KeyBinds.KeyHazardMod,  new OperateKeys(Keys.None)}
         };
         private Dictionary<ButtonBinds, Control?> JoyPadSettings = new Dictionary<ButtonBinds, Control?>()
         {
@@ -124,12 +140,12 @@ namespace AdvancedTurnSignals
 
             ScriptSettings ini = ScriptSettings.Load(@"scripts\AdvancedTurnSignals.ini"); //INI File
             // iniのデータを読み込む (セクション、キー、デフォルト値)
-            KeyboardSettings[KeyBinds.KeyLeft] = ini.GetValue("Keys", "Left", Keys.J);
-            KeyboardSettings[KeyBinds.KeyRight] = ini.GetValue("Keys", "Right", Keys.K);
-            KeyboardSettings[KeyBinds.KeyHazard] = ini.GetValue("Keys", "Hazard", Keys.I);
-            KeyboardSettings[KeyBinds.KeyLeftMod] = ini.GetValue("Keys", "LeftModifier", Keys.None);
-            KeyboardSettings[KeyBinds.KeyRightMod] = ini.GetValue("Keys", "RightModifier", Keys.None);
-            KeyboardSettings[KeyBinds.KeyHazardMod] = ini.GetValue("Keys", "HazardModifier", Keys.None);
+            KeyboardSettings[KeyBinds.KeyLeft] = new OperateKeys(ini.GetValue("Keys", "Left", Keys.J));
+            KeyboardSettings[KeyBinds.KeyRight] = new OperateKeys(ini.GetValue("Keys", "Right", Keys.K));
+            KeyboardSettings[KeyBinds.KeyHazard] = new OperateKeys(ini.GetValue("Keys", "Hazard", Keys.I));
+            KeyboardSettings[KeyBinds.KeyLeftMod] = new OperateKeys(ini.GetValue("Keys", "LeftModifier", Keys.None));
+            KeyboardSettings[KeyBinds.KeyRightMod] = new OperateKeys(ini.GetValue("Keys", "RightModifier", Keys.None));
+            KeyboardSettings[KeyBinds.KeyHazardMod] = new OperateKeys(ini.GetValue("Keys", "HazardModifier", Keys.None));
 
             JoyPadSettings[ButtonBinds.ButtonLeft] = ConvertStrToCtrl("Left", ini.GetValue("Buttons", "Left", "LB"), "LB");
             JoyPadSettings[ButtonBinds.ButtonRight] = ConvertStrToCtrl("Right", ini.GetValue("Buttons", "Right", "RB"), "RB");
@@ -155,19 +171,39 @@ namespace AdvancedTurnSignals
             // HashSetならAddやRemoveで既に存在する場合や、そもそもAddされていない場合でもArgumentExceptionなどは発生しない。安心！
             // 0x8000って？：押下状態を表すWin32の状態フラグ。他にもいろいろあるが、押しているかどうかの判定ならこれで十分。
             if ((GetAsyncKeyState((int)Keys.LButton) & 0x8000) != 0) MouseDownEditor(ActiveKeys.Add(Keys.LButton));
-            else ActiveKeys.Remove(Keys.LButton);
+            else
+            {
+                ActiveKeys.Remove(Keys.LButton);
+                ResetInterlock(Keys.LButton);
+            }
 
             if ((GetAsyncKeyState((int)Keys.RButton) & 0x8000) != 0) MouseDownEditor(ActiveKeys.Add(Keys.RButton));
-            else ActiveKeys.Remove(Keys.RButton);
+            else
+            {
+                ActiveKeys.Remove(Keys.RButton);
+                ResetInterlock(Keys.RButton);
+            }
 
             if ((GetAsyncKeyState((int)Keys.MButton) & 0x8000) != 0) MouseDownEditor(ActiveKeys.Add(Keys.MButton));
-            else ActiveKeys.Remove(Keys.MButton);
+            else
+            {
+                ActiveKeys.Remove(Keys.MButton);
+                ResetInterlock(Keys.MButton);
+            }
 
             if ((GetAsyncKeyState((int)Keys.XButton1) & 0x8000) != 0) MouseDownEditor(ActiveKeys.Add(Keys.XButton1));
-            else ActiveKeys.Remove(Keys.XButton1);
+            else
+            {
+                ActiveKeys.Remove(Keys.XButton1);
+                ResetInterlock(Keys.XButton1);
+            }
 
             if ((GetAsyncKeyState((int)Keys.XButton2) & 0x8000) != 0) MouseDownEditor(ActiveKeys.Add(Keys.XButton2));
-            else ActiveKeys.Remove(Keys.XButton2);
+            else
+            {
+                ActiveKeys.Remove(Keys.XButton2);
+                ResetInterlock(Keys.XButton2);
+            }
 
             // MouseDownがTrueなら
             if (MouseDown)
@@ -184,19 +220,43 @@ namespace AdvancedTurnSignals
         private void ModifierKeyUpDown()
         {
             if ((GetAsyncKeyState((int)Keys.LShiftKey) & 0x8000) != 0) ActiveKeys.Add(Keys.LShiftKey);
-            else ActiveKeys.Remove(Keys.LShiftKey);
+            else
+            {
+                ActiveKeys.Remove(Keys.LShiftKey);
+                ResetInterlock(Keys.LShiftKey);
+            }
             if ((GetAsyncKeyState((int)Keys.RShiftKey) & 0x8000) != 0) ActiveKeys.Add(Keys.RShiftKey);
-            else ActiveKeys.Remove(Keys.RShiftKey);
+            else
+            {
+                ActiveKeys.Remove(Keys.RShiftKey);
+                ResetInterlock(Keys.RShiftKey);
+            }
 
             if ((GetAsyncKeyState((int)Keys.LControlKey) & 0x8000) != 0) ActiveKeys.Add(Keys.LControlKey);
-            else ActiveKeys.Remove(Keys.LControlKey);
+            else
+            {
+                ActiveKeys.Remove(Keys.LControlKey);
+                ResetInterlock(Keys.LControlKey);
+            }
             if ((GetAsyncKeyState((int)Keys.RControlKey) & 0x8000) != 0) ActiveKeys.Add(Keys.RControlKey);
-            else ActiveKeys.Remove(Keys.RControlKey);
+            else
+            {
+                ActiveKeys.Remove(Keys.RControlKey);
+                ResetInterlock(Keys.RControlKey);
+            }
 
             if ((GetAsyncKeyState((int)Keys.LMenu) & 0x8000) != 0) ActiveKeys.Add(Keys.LMenu);
-            else ActiveKeys.Remove(Keys.LMenu);
+            else
+            {
+                ActiveKeys.Remove(Keys.LMenu);
+                ResetInterlock(Keys.LMenu);
+            }
             if ((GetAsyncKeyState((int)Keys.RMenu) & 0x8000) != 0) ActiveKeys.Add(Keys.RMenu);
-            else ActiveKeys.Remove(Keys.RMenu);
+            else
+            {
+                ActiveKeys.Remove(Keys.RMenu);
+                ResetInterlock(Keys.RMenu);
+            }
         }
         #endregion
 
@@ -208,25 +268,28 @@ namespace AdvancedTurnSignals
             Vehicle cv = Utils.GetCurrentVehicle();
             if (!ScriptEnabled || cv == null || !Utils.IsIndicatorAvailable(cv)) return;
 
-            Keys KeyL = KeyboardSettings[KeyBinds.KeyLeft];
-            Keys KeyR = KeyboardSettings[KeyBinds.KeyRight];
-            Keys KeyH = KeyboardSettings[KeyBinds.KeyHazard];
-            Keys KeyLm = KeyboardSettings[KeyBinds.KeyLeftMod];
-            Keys KeyRm = KeyboardSettings[KeyBinds.KeyRightMod];
-            Keys KeyHm = KeyboardSettings[KeyBinds.KeyHazardMod];
+            OperateKeys KeyL = KeyboardSettings[KeyBinds.KeyLeft];
+            OperateKeys KeyR = KeyboardSettings[KeyBinds.KeyRight];
+            OperateKeys KeyH = KeyboardSettings[KeyBinds.KeyHazard];
+            OperateKeys KeyLm = KeyboardSettings[KeyBinds.KeyLeftMod];
+            OperateKeys KeyRm = KeyboardSettings[KeyBinds.KeyRightMod];
+            OperateKeys KeyHm = KeyboardSettings[KeyBinds.KeyHazardMod];
 
 
-            //修飾キーが押されているか（ない場合は普通に実行）
-            if (ActiveKeys.Contains(KeyL) && KeyLm == Keys.None | ActiveKeys.Contains(KeyLm))
+            //インターロックがかかっておらず、修飾キーが押されているか（ない場合は普通に実行）
+            if (!KeyL.Locked && ActiveKeys.Contains(KeyL.KeyCode) && KeyLm.KeyCode == Keys.None | ActiveKeys.Contains(KeyLm.KeyCode))
             {
+                KeyL.Locked = true; //実行済みのためインターロックON
                 signalController.Activate(cv, IndicatorState.Left, Utils.IsBike(cv));
             }
-            else if (ActiveKeys.Contains(KeyR) && KeyRm == Keys.None | ActiveKeys.Contains(KeyRm))
+            else if (!KeyR.Locked && ActiveKeys.Contains(KeyR.KeyCode) && KeyRm.KeyCode == Keys.None | ActiveKeys.Contains(KeyRm.KeyCode))
             {
+                KeyR.Locked = true;
                 signalController.Activate(cv, IndicatorState.Right, Utils.IsBike(cv));
             }
-            else if (ActiveKeys.Contains(KeyH) && KeyHm == Keys.None | ActiveKeys.Contains(KeyHm))
+            else if (!KeyH.Locked && ActiveKeys.Contains(KeyH.KeyCode) && KeyHm.KeyCode == Keys.None | ActiveKeys.Contains(KeyHm.KeyCode))
             {
+                KeyH.Locked = true;
                 signalController.Activate(cv, IndicatorState.Hazard, Utils.IsBike(cv));
             }
         }
@@ -252,7 +315,12 @@ namespace AdvancedTurnSignals
 
         public void OnKeyUp(object sender, KeyEventArgs e)
         {
-            if (ActiveKeys.Contains(e.KeyCode)) ActiveKeys.Remove(e.KeyCode);
+            if (ActiveKeys.Contains(e.KeyCode))
+            {
+                ActiveKeys.Remove(e.KeyCode);
+                ResetInterlock(e.KeyCode);
+            }
+
             // Ctrl, Alt ,Shiftの場合 (下でelseを使わない理由はLR指定をしていない場合の対策)
             if (new Keys[] { Keys.ControlKey, Keys.ShiftKey, Keys.Menu }.Contains(e.KeyCode))
             {
@@ -271,6 +339,22 @@ namespace AdvancedTurnSignals
                 Task.Run(() => { signalController.digital_AutoOff(DigitalAutoOffCanceller.Token); });
             }
 
+        }
+
+        /// <summary>
+        /// KeyBoardSettingsのインターロックを解除します。
+        /// </summary>
+        /// <param name="k">解除するキー。</param>
+        private void ResetInterlock(Keys k)
+        {
+            foreach (KeyBinds b in KeyboardSettings.Keys)
+            {
+                if (KeyboardSettings[b].KeyCode == k)
+                {
+                    // インターロック解除
+                    KeyboardSettings[b].Locked = false;
+                }
+            }
         }
 
         // ＝＝＝＝＝＝＝＝＝＝コントローラー関係＝＝＝＝＝＝＝＝＝＝
